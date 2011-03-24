@@ -1,0 +1,55 @@
+HISP AGENT requests
+
+Create EHR
+	Fields
+			Username --- To check that request can be made and user is valid
+			Password --- To check that request can be made and user is valid
+			userID	--- Just one more than the last one?
+			readAcess  --- Default should be Creator
+			writeAcess --- Default should be Creator
+			encryptionKeyId --- just one more than the last one?
+			owner --- Person Creating it
+			information --- the actual record, for us just garbage
+			
+			
+Grant acess to EHR
+	Fields
+			Username --- To check that request can be made and user is valid
+			Password --- To check that request can be made and user is valid
+			userID --- of record to modify
+			read --- HISP agents to add read access of
+			write -- HISP agents to add write access of
+			
+			
+revoke access to EHR
+	Fields
+			Username --- To check that request can be made and user is valid
+			Password --- To check that request can be made and user is valid
+			userID --- of record to modify
+			read --- HISP agents to add read access of
+			write -- HISP agents to add write access of
+			
+View  EHR
+	Fields
+			Username --- To check that request can be made and user is valid
+			Password --- To check that request can be made and user is valid
+			userID --- of record to view
+			
+Modify Record
+	Fields
+			Username --- To check that request can be made and user is valid
+			Password --- To check that request can be made and user is valid
+			userID --- of record to view
+			Data --- information to append
+			
+			
+PHR agent Requests
+
+View  EHR
+	Fields
+			Username --- To check that request can be made and user is valid
+			Password --- To check that request can be made and user is valid
+			
+
+			
+			
