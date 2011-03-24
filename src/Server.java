@@ -1,9 +1,12 @@
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
@@ -37,12 +40,19 @@ public class Server {
 			InputStream inputstream = sslsocket.getInputStream();
 			InputStreamReader inputstreamreader = new InputStreamReader(inputstream);
 			BufferedReader bufferedreader = new BufferedReader(inputstreamreader);
-			ArrayList<byte[]> test = new ArrayList<byte[]>();			
+			ArrayList<byte[]> test = new ArrayList<byte[]>();	
+			
+			OutputStream outputstream = sslsocket.getOutputStream();
+            OutputStreamWriter outputstreamwriter = new OutputStreamWriter(outputstream);
+            BufferedWriter bufferedwriter = new BufferedWriter(outputstreamwriter);
+
 			String string = null;
 			while ((string = bufferedreader.readLine()) != null) {
 				byte[] b = (encrypt(string));
 				test.add(b); 
 				System.out.println(b);
+				bufferedwriter.write(new String(b) +'\n');
+				bufferedwriter.flush();
 				if(test.size() % 5 == 0)
 				for(byte[] s: test)
 					System.out.println(decrypt(s));

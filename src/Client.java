@@ -17,15 +17,22 @@ class Client {
             InputStream inputstream = System.in;
             InputStreamReader inputstreamreader = new InputStreamReader(inputstream);
             BufferedReader bufferedreader = new BufferedReader(inputstreamreader);
+            
+            InputStream sslinput = sslsocket.getInputStream();
+            InputStreamReader sslinputreader = new InputStreamReader(sslinput);
+            BufferedReader bufferedsslinputreader = new BufferedReader(sslinputreader);
 
             OutputStream outputstream = sslsocket.getOutputStream();
             OutputStreamWriter outputstreamwriter = new OutputStreamWriter(outputstream);
             BufferedWriter bufferedwriter = new BufferedWriter(outputstreamwriter);
 
-            String string = null;
+            String string = null, s = null;
             while ((string = bufferedreader.readLine()) != null) {
                 bufferedwriter.write(string + '\n');
                 bufferedwriter.flush();
+                
+                s = bufferedsslinputreader.readLine();
+                if(s != null) System.out.println(s);
             }
        
         } catch (Exception exception) {
