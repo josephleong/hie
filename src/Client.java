@@ -18,19 +18,20 @@ class Client {
             InputStreamReader inputstreamreader = new InputStreamReader(inputstream);
             BufferedReader bufferedreader = new BufferedReader(inputstreamreader);
 
-            OutputStream sslout = sslsocket.getOutputStream();
-            ObjectOutputStream oos = new ObjectOutputStream(sslout);
+            OutputStream sslOut = sslsocket.getOutputStream();
+            ObjectOutputStream objOut = new ObjectOutputStream(sslOut);
                        
-            InputStream sslin = sslsocket.getInputStream();
-            ObjectInputStream ios = new ObjectInputStream(sslin);
+            InputStream sslIn = sslsocket.getInputStream();
+            ObjectInputStream objIn = new ObjectInputStream(sslIn);
             
             String string = null;
-            Response res = null;
+            Response response = null;
+            Request request = null;
             while ((string = bufferedreader.readLine()) != null) {
-            	oos.writeObject(new Request(string));
+            	
+            	objOut.writeObject(request);
+                response = (Response)objIn.readObject();
                 
-                res = (Response)ios.readObject();
-                System.out.println(res);
             }
        
         } catch (Exception exception) {
@@ -40,10 +41,8 @@ class Client {
     
 	private static SSLSocket handshake() {
 		try {
-			SSLSocketFactory sslsocketfactory = (SSLSocketFactory) SSLSocketFactory
-					.getDefault();
-			SSLSocket sslsocket = (SSLSocket) sslsocketfactory.createSocket(
-					"localhost", 9999);
+			SSLSocketFactory sslsocketfactory = (SSLSocketFactory) SSLSocketFactory.getDefault();
+			SSLSocket sslsocket = (SSLSocket) sslsocketfactory.createSocket("localhost", 9999);
 			String[] enabledCipherSuites = { "SSL_DH_anon_WITH_RC4_128_MD5" };
 			sslsocket.setEnabledCipherSuites(enabledCipherSuites);
 			return sslsocket;

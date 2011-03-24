@@ -1,10 +1,8 @@
 import java.io.Serializable;
+import java.sql.Date;
 
 
 public class Request implements Serializable {
-	public String text;
-	
-	public Request(String s) {
-		this.text = s;
-	}
+	Date date;
+	//User/name w/e
 }

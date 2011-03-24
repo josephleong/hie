@@ -35,20 +35,35 @@ public class Server {
 			SSLSocket sslsocket = handshake();
 			
 			OutputStream sslout = sslsocket.getOutputStream();
-			ObjectOutputStream oos = new ObjectOutputStream(sslout);
+			ObjectOutputStream objOut = new ObjectOutputStream(sslout);
 			
-			InputStream sslin = sslsocket.getInputStream();
-			ObjectInputStream ios = new ObjectInputStream(sslin);
+			InputStream sslIn = sslsocket.getInputStream();
+			ObjectInputStream objIn = new ObjectInputStream(sslIn);
 	
-            Request req = null;
-            while((req = (Request)ios.readObject()) != null) {
-            	 System.out.println(req.text);
-            	 oos.writeObject(new Response(new String(encrypt(req.text))));
+            Request request = null;
+            Response response = null;
+            while((request = (Request)objIn.readObject()) != null) {
+            	response = processRequest(request);
+            	objOut.writeObject(response);
             }
 		
 		} catch (Exception exception) {
 			exception.printStackTrace();
 		}
+	}
+	
+	private static Response processRequest(Request request) {
+		Response response = new Response();
+		if(request instanceof CreateRecord) {
+			
+		}
+		else if (request instanceof GrantViewAccess) {
+			
+		}
+		else if (request instanceof GrantModifyAccess) {
+			
+		}
+		return response;
 	}
 	
 	private static SSLSocket handshake() {
