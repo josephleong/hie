@@ -25,7 +25,7 @@ import java.sql.ResultSet;
 import java.sql.Statement;
 
 
-public class AuthenticationServer {
+public class AuthServerHISP {
 
 	public static void main(String[] args) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchProviderException, NoSuchPaddingException, InvalidAlgorithmParameterException, IOException {
 
@@ -82,7 +82,7 @@ public class AuthenticationServer {
 		try {
 			Class.forName("org.sqlite.JDBC");
 			connection = DriverManager
-					.getConnection("jdbc:sqlite:Authentication.db");
+					.getConnection("jdbc:sqlite:HISP.db");
 			statement = connection.createStatement();
 	        resultSet = statement.executeQuery("select password from users where username = '" + name + "';");
 	        if(resultSet.getString("password").equals(hashtext))

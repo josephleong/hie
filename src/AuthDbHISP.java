@@ -7,7 +7,7 @@ import java.sql.ResultSet;
 import java.sql.Statement;
 import java.security.*;
 
-public class AuthenticaitonDB {
+public class AuthDbHISP {
     public static void main(String[] args) throws Exception {
     	
     	String plaintext = "password1";
@@ -27,17 +27,17 @@ public class AuthenticaitonDB {
     	
     	
         Class.forName("org.sqlite.JDBC");
-        Connection conn = DriverManager.getConnection("jdbc:sqlite:Authentication.db");
+        Connection conn = DriverManager.getConnection("jdbc:sqlite:HISP.db");
         Statement stat = conn.createStatement();
         stat.executeUpdate("drop table if exists users;");
         stat.executeUpdate("create table users (username, password);");
         PreparedStatement prep = conn.prepareStatement(
             "insert into users values (?, ?);");
 
-        prep.setString(1, "Patient1");
+        prep.setString(1, "Doctor1");
         prep.setString(2, hashtext);
         prep.addBatch();
-        prep.setString(1, "Patient2");
+        prep.setString(1, "Doctor2");
         prep.setString(2, hashtext2);
         prep.addBatch();
 

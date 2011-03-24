@@ -10,7 +10,7 @@ import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 
 public
-class AuthClient {
+class AuthenticationHISP {
 	public static void main(String[] args) {
 		try {
 			SSLSocket sslsocket = handshake();
