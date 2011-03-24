@@ -1,18 +1,15 @@
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.OutputStream;
-import java.io.OutputStreamWriter;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.Security;
-import java.util.ArrayList;
 
 import javax.crypto.Cipher;
 import javax.crypto.CipherInputStream;
@@ -37,27 +34,17 @@ public class Server {
 		try {
 			SSLSocket sslsocket = handshake();
 			
-			InputStream inputstream = sslsocket.getInputStream();
-			InputStreamReader inputstreamreader = new InputStreamReader(inputstream);
-			BufferedReader bufferedreader = new BufferedReader(inputstreamreader);
-			ArrayList<byte[]> test = new ArrayList<byte[]>();	
+			OutputStream sslout = sslsocket.getOutputStream();
+			ObjectOutputStream oos = new ObjectOutputStream(sslout);
 			
-			OutputStream outputstream = sslsocket.getOutputStream();
-            OutputStreamWriter outputstreamwriter = new OutputStreamWriter(outputstream);
-            BufferedWriter bufferedwriter = new BufferedWriter(outputstreamwriter);
-
-			String string = null;
-			while ((string = bufferedreader.readLine()) != null) {
-				byte[] b = (encrypt(string));
-				test.add(b); 
-				System.out.println(b);
-				bufferedwriter.write(new String(b) +'\n');
-				bufferedwriter.flush();
-				if(test.size() % 5 == 0)
-				for(byte[] s: test)
-					System.out.println(decrypt(s));
-				System.out.flush();
-			}
+			InputStream sslin = sslsocket.getInputStream();
+			ObjectInputStream ios = new ObjectInputStream(sslin);
+	
+            Request req = null;
+            while((req = (Request)ios.readObject()) != null) {
+            	 System.out.println(req.text);
+            	 oos.writeObject(new Response(new String(encrypt(req.text))));
+            }
 		
 		} catch (Exception exception) {
 			exception.printStackTrace();
@@ -93,7 +80,6 @@ public class Server {
 	    SecretKeySpec key = new SecretKeySpec(keyBytes, "AES");
 	    IvParameterSpec ivSpec = new IvParameterSpec(ivBytes);
 	    Cipher cipher = Cipher.getInstance("AES/CTR/NoPadding", "BC");
-	    System.out.println("input : " + new String(input));
 
 	    // encryption pass
 	    cipher.init(Cipher.ENCRYPT_MODE, key, ivSpec);
