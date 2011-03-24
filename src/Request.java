@@ -3,6 +3,10 @@ import java.sql.Date;
 
 
 public class Request implements Serializable {
-	Date date;
-	//User/name w/e
+	long uid;
+	
+	public Request(long uid) {
+		this.uid = uid;
+		System.out.println("Request");
+	}
 }

@@ -1,5 +1,6 @@
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
@@ -28,26 +29,35 @@ public class Server {
 	private static byte[] ivBytes = new byte[] { 0x00, 0x01, 0x02, 0x03, 0x00, 0x01, 0x02, 0x03, 0x00, 0x00, 0x00,
 	        0x00, 0x00, 0x00, 0x00, 0x01 };
 	
+	private static SSLSocket sslsocket;
 	
-	public static void main(String[] args) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchProviderException, NoSuchPaddingException, InvalidAlgorithmParameterException, IOException {
+	public static void main(String[] args) throws IOException {
 				
+		SSLServerSocket sslserversocket = handshake();
+		while((sslsocket = (SSLSocket) sslserversocket.accept()) != null){
+			run();
+		}
+	}
+	
+	private static void run() {
 		try {
-			SSLSocket sslsocket = handshake();
-			
+						
 			OutputStream sslout = sslsocket.getOutputStream();
 			ObjectOutputStream objOut = new ObjectOutputStream(sslout);
-			
+
 			InputStream sslIn = sslsocket.getInputStream();
 			ObjectInputStream objIn = new ObjectInputStream(sslIn);
-	
-            Request request = null;
-            Response response = null;
-            while((request = (Request)objIn.readObject()) != null) {
-            	response = processRequest(request);
-            	objOut.writeObject(response);
-            }
-		
+
+			Request request = null;
+			Response response = null;
+			while ((request = (Request) objIn.readObject()) != null) {
+				response = processRequest(request);
+				objOut.writeObject(response);
+			}
+		} catch (EOFException exception) {
+			System.out.println("Goodbye");
 		} catch (Exception exception) {
+			System.out.println("Exiting Server");
 			exception.printStackTrace();
 		}
 	}
@@ -55,18 +65,27 @@ public class Server {
 	private static Response processRequest(Request request) {
 		Response response = new Response();
 		if(request instanceof CreateRecord) {
-			
+			System.out.println("Create Record");
 		}
 		else if (request instanceof GrantViewAccess) {
-			
+			System.out.println("Granting View");
 		}
 		else if (request instanceof GrantModifyAccess) {
-			
+			System.out.println("Granting Modify");
+		}
+		else if (request instanceof RevokeViewAccess) {
+			System.out.println("Revoking View");
+		}
+		else if (request instanceof RevokeModifyAccess) {
+			System.out.println("Revoking Modify");
+		}
+		else {
+			System.out.println("Unknown Request");
 		}
 		return response;
 	}
 	
-	private static SSLSocket handshake() {
+	private static SSLServerSocket handshake() {
 		try {
 			SSLServerSocketFactory sslserversocketfactory = 
 				(SSLServerSocketFactory) SSLServerSocketFactory.getDefault();
@@ -77,9 +96,7 @@ public class Server {
 			String[] enabledCipherSuites = { "SSL_DH_anon_WITH_RC4_128_MD5" };
 			sslserversocket.setEnabledCipherSuites(enabledCipherSuites);
 
-			SSLSocket sslsocket = (SSLSocket) sslserversocket.accept();
-
-			return sslsocket;
+			return sslserversocket;
 		
 		} catch (Exception exception) {
 			exception.printStackTrace();
@@ -90,8 +107,7 @@ public class Server {
 	private static byte[] encrypt(String s) throws IOException, NoSuchAlgorithmException, NoSuchProviderException, NoSuchPaddingException, InvalidKeyException, InvalidAlgorithmParameterException {
 		Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());        
 	    byte[] input = s.getBytes();
-	    
-	    
+	    	    
 	    SecretKeySpec key = new SecretKeySpec(keyBytes, "AES");
 	    IvParameterSpec ivSpec = new IvParameterSpec(ivBytes);
 	    Cipher cipher = Cipher.getInstance("AES/CTR/NoPadding", "BC");

@@ -4,6 +4,7 @@ import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
+import java.sql.Date;
 
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
@@ -28,7 +29,7 @@ class Client {
             Response response = null;
             Request request = null;
             while ((string = bufferedreader.readLine()) != null) {
-            	
+            	request = new Request(11111111111L);
             	objOut.writeObject(request);
                 response = (Response)objIn.readObject();
                 
