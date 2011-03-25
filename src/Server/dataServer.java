@@ -32,8 +32,11 @@ import javax.net.ssl.SSLSocket;
 
 import Requests.CreateRecord;
 import Requests.GrantReadAccess;
+import Requests.GrantWriteAccess;
 import Requests.ReadRecord;
 import Requests.Request;
+import Requests.RevokeReadAccess;
+import Requests.RevokeWriteAccess;
 
 public class dataServer {
 	
@@ -92,17 +95,44 @@ public class dataServer {
 				boolean valid = checkHISPUser(request.getUserid(), request.getPassword());
 				if(valid)
 					response = getRecord(((ReadRecord)request).getRecordId(), request.getUserid());
+				else
+					response = new Reply("Invalid User Login");
 			}
 		}
 		else if(request instanceof CreateRecord) {
 			boolean valid = checkHISPUser(request.getUserid(), request.getPassword());
 			if(valid)
 				response = createRecord((CreateRecord)request);
+			else
+				response = new Reply("Invalid User Login");
 		}
 		else if(request instanceof GrantReadAccess) {
 			boolean valid = checkHISPUser(request.getUserid(), request.getPassword());
 			if(valid)
 				response = grantReadAccess((GrantReadAccess)request);
+			else
+				response = new Reply("Invalid User Login");
+		}
+		else if(request instanceof RevokeReadAccess) {
+			boolean valid = checkHISPUser(request.getUserid(), request.getPassword());
+			if(valid)
+				response = revokeReadAccess((RevokeReadAccess)request);
+			else
+				response = new Reply("Invalid User Login");
+		}
+		else if(request instanceof GrantWriteAccess) {
+			boolean valid = checkHISPUser(request.getUserid(), request.getPassword());
+			if(valid)
+				response = grantWriteAccess((GrantWriteAccess)request);
+			else
+				response = new Reply("Invalid User Login");
+		}
+		else if(request instanceof RevokeWriteAccess) {
+			boolean valid = checkHISPUser(request.getUserid(), request.getPassword());
+			if(valid)
+				response = revokeWriteAccess((RevokeWriteAccess)request);
+			else
+				response = new Reply("Invalid User Login");
 		}
 			
 		return response;
@@ -135,6 +165,120 @@ public class dataServer {
 		}
 		return false;
 	}
+	
+	private static Reply revokeReadAccess(RevokeReadAccess request) {
+		if (!isOwner(request.getUserid(), request.getPatientId()))
+			return new Reply("Invalid Request");
+		Connection connection = null;
+		ResultSet resultSet = null;
+		Statement statement = null;
+		Reply response = null;
+		try {
+			Class.forName("org.sqlite.JDBC");
+			connection = DriverManager.getConnection("jdbc:sqlite:DS.db");
+			statement = connection.createStatement();
+	        resultSet = statement.executeQuery("select * from readAccess where userId = '" + request.getPatientId() + "' and agentId = '" + request.getGranteeId() + "';");
+			if (resultSet.next()) {
+				statement.execute("delete from readAccess " +
+								"where userId = '" + request.getPatientId() + "' and " +
+								"agentId = '" + request.getGranteeId() + "';");
+
+				response = new Reply("Read access succesfully revoked!");
+			}
+	        else
+	        	response = new Reply("Already does not have read access");
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			try {
+				statement.close();
+				connection.close();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+		return response;
+	}
+
+	
+	private static Reply grantWriteAccess(GrantWriteAccess request) {
+		if (!isOwner(request.getUserid(), request.getPatientId()))
+			return new Reply("Invalid Request");
+		Connection connection = null;
+		ResultSet resultSet = null;
+		Statement statement = null;
+		Reply response = null;
+		PreparedStatement prep = null;
+		try {
+			Class.forName("org.sqlite.JDBC");
+			connection = DriverManager.getConnection("jdbc:sqlite:DS.db");
+			statement = connection.createStatement();
+	        resultSet = statement.executeQuery("select * from writeAccess where userId = '" + request.getPatientId() + "' and agentId = '" + request.getGranteeId() + "';");
+			if(resultSet.next()){
+	        	response = new Reply("Already has write access");
+	        }
+	        else
+	            prep = connection.prepareStatement(
+	            "insert into writeAccess values (?, ?);");
+
+	    	    prep.setString(1, request.getPatientId());
+	    	    prep.setString(2, request.getGranteeId());
+	    	    prep.addBatch();	    	
+	    	    connection.setAutoCommit(false);
+	    	    prep.executeBatch();
+	    	    connection.setAutoCommit(true);
+	    	    response = new Reply("Write access succesfully granted!");
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			try {
+				statement.close();
+				connection.close();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+		return response;
+	}
+	
+	private static Reply revokeWriteAccess(RevokeWriteAccess request) {
+		if (!isOwner(request.getUserid(), request.getPatientId()))
+			return new Reply("Invalid Request");
+		Connection connection = null;
+		ResultSet resultSet = null;
+		Statement statement = null;
+		Reply response = null;
+		try {
+			Class.forName("org.sqlite.JDBC");
+			connection = DriverManager.getConnection("jdbc:sqlite:DS.db");
+			statement = connection.createStatement();
+	        resultSet = statement.executeQuery("select * from writeAccess where userId = '" + request.getPatientId() + "' and agentId = '" + request.getGranteeId() + "';");
+			if (resultSet.next()) {
+				statement.execute("delete from writeAccess " +
+								"where userId = '" + request.getPatientId() + "' and " +
+								"agentId = '" + request.getGranteeId() + "';");
+
+				response = new Reply("Write access succesfully revoked!");
+			}
+	        else
+	        	response = new Reply("Already does not have write access");
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			try {
+				statement.close();
+				connection.close();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+		return response;
+	}
+
+	
 	private static Reply grantReadAccess(GrantReadAccess request) {
 		if (!isOwner(request.getUserid(), request.getPatientId()))
 			return new Reply("Invalid Request");

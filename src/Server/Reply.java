@@ -20,4 +20,8 @@ public class Reply implements Serializable {
 	public String getMessage() {
 		return message;
 	}
+	
+	public String toString() {
+		return message;
+	}
 }
