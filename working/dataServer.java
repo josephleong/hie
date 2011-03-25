@@ -176,8 +176,6 @@ public class dataServer {
 
 	private static String recordToString(ResultSet resultSet) throws SQLException, InvalidKeyException, InvalidAlgorithmParameterException, NoSuchAlgorithmException, NoSuchProviderException, NoSuchPaddingException, IOException {
 		String message = "UserId: " + resultSet.getString("userId") + "\n";
-		message += "Read Acess: " + resultSet.getString("readAcess") + "\n"; 
-		message += "Write Acess: " + resultSet.getString("writeAcess") + "\n"; 
 		message += "Encryption Key Id: " + resultSet.getLong("encryptionKeyId") + "\n"; 
 		message += "Owner: " + resultSet.getString("owner") + "\n"; 
 		message += "Information: " + decrypt(resultSet.getBytes("information")) + "\n"; 
