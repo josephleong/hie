@@ -17,6 +17,7 @@ import Requests.ReadRecord;
 import Requests.Request;
 import Requests.RevokeReadAccess;
 import Requests.RevokeWriteAccess;
+import Requests.UpdateRecord;
 import Server.Reply;
 
 public class HISPagent {
@@ -94,6 +95,13 @@ public class HISPagent {
 			System.out.println("What is the patients userId?");
 			String patientId = bufferedreader.readLine();
 			request = new RevokeWriteAccess(username, password, agentId, patientId);
+		}
+		else if(command.equals("add")) {
+			System.out.println("What is the patients userId?");
+			String patientId = bufferedreader.readLine();
+			System.out.println("What would you like to add?");
+			String info = bufferedreader.readLine();
+			request = new UpdateRecord(username, password, patientId, info);
 		}
 		else{
 			System.out.print("Invalid command!");

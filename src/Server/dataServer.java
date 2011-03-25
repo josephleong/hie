@@ -37,6 +37,7 @@ import Requests.ReadRecord;
 import Requests.Request;
 import Requests.RevokeReadAccess;
 import Requests.RevokeWriteAccess;
+import Requests.UpdateRecord;
 
 public class dataServer {
 	
@@ -134,7 +135,45 @@ public class dataServer {
 			else
 				response = new Reply("Invalid User Login");
 		}
+		else if(request instanceof UpdateRecord) {
+			boolean valid = checkHISPUser(request.getUserid(), request.getPassword());
+			if(valid)
+				response = updateRecord((UpdateRecord)request);
+			else
+				response = new Reply("Invalid User Login");
+		}
 			
+		return response;
+	}
+	
+	private static Reply updateRecord(UpdateRecord request) {
+		Connection connection = null;
+		ResultSet resultSet = null;
+		Statement statement = null;
+		Reply response = null;
+		try {
+			Class.forName("org.sqlite.JDBC");
+			connection = DriverManager.getConnection("jdbc:sqlite:DS.db");
+			statement = connection.createStatement();
+	        resultSet = statement.executeQuery("select * from records where userId = '" + request.getPatientId() + "' and (owner = '"+ request.getUserid() + "' or '" + request.getUserid() + "' in (select agentId from writeAccess where userId = '" + request.getPatientId() + "'));");
+	        if(resultSet.next()){
+	        	String oldInfo = new String(decrypt(resultSet.getBytes("information")));
+	        	statement.executeUpdate("update records set information = '" + new String(encrypt(oldInfo + request.getAddInfo())) + "' where userId = '" + request.getPatientId() + "';");
+	        	response = new Reply("Update Successful");
+	        }
+	        else
+	        	response = new Reply("Invalid Request.");
+		               
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			try {
+				statement.close();
+				connection.close();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
 		return response;
 	}
 	
