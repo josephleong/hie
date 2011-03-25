@@ -115,14 +115,12 @@ public class dataServer {
 	        }
 	        else
 	            prep = connection.prepareStatement(
-	            "insert into records values (?, ?, ?, ?, ?, ?);");
+	            "insert into records values (?, ?, ?, ?);");
 
 	    	    prep.setString(1, request.patientId);
-	    	    prep.setString(2, "");
-	    	    prep.setString(3, "");
-	    	    prep.setLong(4, request.encryptionKeyId);
-	    	    prep.setString(5, request.userid);
-	    	    prep.setBytes(6, encrypt(request.information));
+	    	    prep.setLong(2, request.encryptionKeyId);
+	    	    prep.setString(3, request.userid);
+	    	    prep.setBytes(4, encrypt(request.information));
 	    	    prep.addBatch();	    	
 	    	    connection.setAutoCommit(false);
 	    	    prep.executeBatch();
