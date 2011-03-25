@@ -157,6 +157,7 @@ public class dataServer {
 			statement = connection.createStatement();
 	        resultSet = statement.executeQuery("select * from records where userId = '" + request.getPatientId() + "' and (owner = '"+ request.getUserid() + "' or '" + request.getUserid() + "' in (select agentId from writeAccess where userId = '" + request.getPatientId() + "'));");
 	        if(resultSet.next()){
+	        	//TODO: FIX!!!
 	        	String oldInfo = new String(decrypt(resultSet.getBytes("information")));
 	        	statement.executeUpdate("update records set information = '" + new String(encrypt(oldInfo + request.getAddInfo())) + "' where userId = '" + request.getPatientId() + "';");
 	        	response = new Reply("Update Successful");
