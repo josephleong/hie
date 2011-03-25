@@ -34,22 +34,24 @@ public class SampleEHRDBCreation {
         Connection conn = DriverManager.getConnection("jdbc:sqlite:DS.db");
         Statement stat = conn.createStatement();
         stat.executeUpdate("drop table if exists records;");
-        stat.executeUpdate("create table records (userId, readAcess, writeAcess, encryptionKeyId, owner, information);");
+        stat.executeUpdate("drop table if exists readAccess;");
+        stat.executeUpdate("drop table if exists writeAccess;");
+        stat.executeUpdate("create table records (userId, encryptionKeyId, owner, information);");
+        stat.executeUpdate("create table readAccess (userId, agentId);");
+        stat.executeUpdate("create table writeAccess (userId, agentId);");
         
         
         
         PreparedStatement prep = conn.prepareStatement(
-        "insert into records values (?, ?, ?, ?, ?, ?);");
+        "insert into records values (?, ?, ?, ?);");
 
 	    prep.setString(1, "Patient1");
-	    prep.setString(2, "");
-	    prep.setString(3, "");
-	    prep.setLong(4, 1);
-	    prep.setString(5, "Doctor1");
+	    prep.setLong(2, 1);
+	    prep.setString(3, "Doctor1");
 	    byte[] test = encrypt("Information Goes here!");
 	    String work = decrypt(test);
 	    System.out.println(work);
-	    prep.setBytes(6, test);
+	    prep.setBytes(4, test);
 	    prep.addBatch();
 	
 	    conn.setAutoCommit(false);
