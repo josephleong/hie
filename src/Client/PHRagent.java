@@ -1,5 +1,6 @@
+package Client;
+
 import java.io.BufferedReader;
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
@@ -9,13 +10,11 @@ import java.io.OutputStream;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 
-import Requests.CreateRecord;
-import Requests.GrantReadAccess;
 import Requests.ReadRecord;
-import Requests.Request;
+import Server.Reply;
 
 public
-class HISPagent {
+class PHRagent {
 	public static void main(String[] args) {
 		try {
 			SSLSocket sslsocket = handshake();
@@ -31,17 +30,16 @@ class HISPagent {
             ObjectInputStream objIn = new ObjectInputStream(sslIn);
             
            
-            Response response = null;
-            
+            Reply response = null;
+
             System.out.println("Username?");
             String username = bufferedreader.readLine();
             System.out.println("Password?");
             String password = bufferedreader.readLine();
-           
-            Request request =  createRequest(username, password);
+            ReadRecord request= new ReadRecord(username, password);	
             objOut.writeObject(request);
-            response = (Response)objIn.readObject();
-        	System.out.println(response.message);
+            response = (Reply)objIn.readObject();
+        	System.out.println(response.getMessage());
 
              
         } catch (Exception exception) {
@@ -49,35 +47,6 @@ class HISPagent {
         }
     }
     
-	private static Request createRequest(String username, String password) throws IOException{
-		InputStream inputstream = System.in;
-		Request request = null;
-		InputStreamReader inputstreamreader = new InputStreamReader(inputstream);
-		BufferedReader bufferedreader = new BufferedReader(inputstreamreader);
-		System.out.println("'create' EHR\n'grant read' access to an EHR\n'revoke read' access to an EHR\n'grant write' access to an EHR\n'revoke write' access to an EHR\n'view' an EHR\n'add' information to an EHR");
-		String command = bufferedreader.readLine();
-		if(command.equals("create"))
-			request = new CreateRecord(username, password);
-		else if(command.equals("view")) {
-			System.out.println("What is the patients userId?");
-			String patientId = bufferedreader.readLine();
-			request = new ReadRecord(username, password, patientId);
-		}
-		else if(command.equals("grant read")) {
-			System.out.println("What is the agent's userId?");
-			String agentId = bufferedreader.readLine();
-			System.out.println("What is the patients userId?");
-			String patientId = bufferedreader.readLine();
-			request = new GrantReadAccess(username, password, agentId, patientId);
-		}
-		else{
-			System.out.print("Invalid command!");
-			System.exit(1);
-		}
-			
-		return request;
-	}
-	
 	private static SSLSocket handshake() {
 		try {
 			SSLSocketFactory sslsocketfactory = (SSLSocketFactory) SSLSocketFactory.getDefault();

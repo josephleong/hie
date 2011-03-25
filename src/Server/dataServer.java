@@ -1,3 +1,4 @@
+package Server;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -65,7 +66,7 @@ public class dataServer {
 				ObjectInputStream objIn = new ObjectInputStream(sslIn);
 		
 	            Request request = null;
-	            Response response = null;
+	            Reply response = null;
 	            request = (Request)objIn.readObject();
             	response = processRequest(request);
             	objOut.writeObject(response);
@@ -76,8 +77,8 @@ public class dataServer {
 		}
 	}
 	
-	private static Response processRequest(Request request) throws NoSuchAlgorithmException {
-		Response response = null;
+	private static Reply processRequest(Request request) throws NoSuchAlgorithmException {
+		Reply response = null;
 		if(request instanceof ReadRecord) {
 			request = (ReadRecord) request;
 			if(((ReadRecord) request).getRecordId() == null){
@@ -85,7 +86,7 @@ public class dataServer {
 				if(valid)
 					response = getRecord(request.getUserid());
 				else
-					response = new Response("Invalid User Login");
+					response = new Reply("Invalid User Login");
 			}
 			else {
 				boolean valid = checkHISPUser(request.getUserid(), request.getPassword());
@@ -134,13 +135,13 @@ public class dataServer {
 		}
 		return false;
 	}
-	private static Response grantReadAccess(GrantReadAccess request) {
+	private static Reply grantReadAccess(GrantReadAccess request) {
 		if (!isOwner(request.getUserid(), request.getPatientId()))
-			return new Response("Invalid Request");
+			return new Reply("Invalid Request");
 		Connection connection = null;
 		ResultSet resultSet = null;
 		Statement statement = null;
-		Response response = null;
+		Reply response = null;
 		PreparedStatement prep = null;
 		try {
 			Class.forName("org.sqlite.JDBC");
@@ -148,7 +149,7 @@ public class dataServer {
 			statement = connection.createStatement();
 	        resultSet = statement.executeQuery("select * from readAccess where userId = '" + request.getPatientId() + "' and agentId = '" + request.getGranteeId() + "';");
 			if(resultSet.next()){
-	        	response = new Response("Already has read access");
+	        	response = new Reply("Already has read access");
 	        }
 	        else
 	            prep = connection.prepareStatement(
@@ -160,7 +161,7 @@ public class dataServer {
 	    	    connection.setAutoCommit(false);
 	    	    prep.executeBatch();
 	    	    connection.setAutoCommit(true);
-	    	    response = new Response("Read access succesfully granted!");
+	    	    response = new Reply("Read access succesfully granted!");
 
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -175,11 +176,11 @@ public class dataServer {
 		return response;
 	}
 	
-	private static Response createRecord(CreateRecord request) {
+	private static Reply createRecord(CreateRecord request) {
 		Connection connection = null;
 		ResultSet resultSet = null;
 		Statement statement = null;
-		Response response = null;
+		Reply response = null;
 		PreparedStatement prep = null;
 		try {
 			Class.forName("org.sqlite.JDBC");
@@ -187,7 +188,7 @@ public class dataServer {
 			statement = connection.createStatement();
 	        resultSet = statement.executeQuery("select * from records where userId = '" + request.getPatientId() + "';");
 			if(resultSet.next()){
-	        	response = new Response("Record already exists, please restart and simply add data to it");
+	        	response = new Reply("Record already exists, please restart and simply add data to it");
 	        }
 	        else
 	            prep = connection.prepareStatement(
@@ -201,7 +202,7 @@ public class dataServer {
 	    	    connection.setAutoCommit(false);
 	    	    prep.executeBatch();
 	    	    connection.setAutoCommit(true);
-	    	    response = new Response("Record succesfully added!");
+	    	    response = new Reply("Record succesfully added!");
 
 
 		} catch (Exception e) {
@@ -217,11 +218,11 @@ public class dataServer {
 		return response;
 	}
 
-	private static Response getRecord(String userId) {
+	private static Reply getRecord(String userId) {
 		Connection connection = null;
 		ResultSet resultSet = null;
 		Statement statement = null;
-		Response response = null;
+		Reply response = null;
 		try {
 			Class.forName("org.sqlite.JDBC");
 			connection = DriverManager.getConnection("jdbc:sqlite:DS.db");
@@ -229,10 +230,10 @@ public class dataServer {
 	        resultSet = statement.executeQuery("select * from records where userId = '" + userId + "';");
 	        if(resultSet.next()){
 	        	String message = recordToString(resultSet);
-	        	response = new Response(message);
+	        	response = new Reply(message);
 	        }
 	        else
-	        	response = new Response("No such record exists.");
+	        	response = new Reply("No such record exists.");
 		           
 	       
 		} catch (Exception e) {
@@ -248,11 +249,11 @@ public class dataServer {
 		return response;
 	}
 	
-	private static Response getRecord(String userId, String agent) {
+	private static Reply getRecord(String userId, String agent) {
 		Connection connection = null;
 		ResultSet resultSet = null;
 		Statement statement = null;
-		Response response = null;
+		Reply response = null;
 		try {
 			Class.forName("org.sqlite.JDBC");
 			connection = DriverManager.getConnection("jdbc:sqlite:DS.db");
@@ -260,10 +261,10 @@ public class dataServer {
 	        resultSet = statement.executeQuery("select * from records where userId = '" + userId + "' and (owner = '"+ agent + "' or '" + agent + "' in (select agentId from readAccess where userId = '" + userId + "'));");
 	        if(resultSet.next()){
 	        	String message = recordToString(resultSet);
-	        	response = new Response(message);
+	        	response = new Reply(message);
 	        }
 	        else
-	        	response = new Response("Invalid Request.");
+	        	response = new Reply("Invalid Request.");
 		           
 	       
 		} catch (Exception e) {
