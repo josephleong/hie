@@ -1,6 +1,7 @@
 package Server;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
@@ -46,37 +47,36 @@ public class dataServer {
 	private static byte[] ivBytes = new byte[] { 0x00, 0x01, 0x02, 0x03, 0x00, 0x01, 0x02, 0x03, 0x00, 0x00, 0x00,
 	        0x00, 0x00, 0x00, 0x00, 0x01 };
 	
+	private static SSLSocket sslsocket;
 	
 	public static void main(String[] args) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchProviderException, NoSuchPaddingException, InvalidAlgorithmParameterException, IOException {
 				
-		try {
-			SSLServerSocketFactory sslserversocketfactory = 
-				(SSLServerSocketFactory) SSLServerSocketFactory.getDefault();
-
-			SSLServerSocket sslserversocket = 
-				(SSLServerSocket) sslserversocketfactory.createServerSocket(9996);
-
-			String[] enabledCipherSuites = { "SSL_DH_anon_WITH_RC4_128_MD5" };
-			sslserversocket.setEnabledCipherSuites(enabledCipherSuites);
-			
-			SSLSocket sslsocket = null;
-			while((sslsocket = (SSLSocket) sslserversocket.accept()) != null){
+		SSLServerSocket sslserversocket = handshake();
+		while((sslsocket = (SSLSocket) sslserversocket.accept()) != null){
+			run();
+		}
+	}
 	
-			
-				OutputStream sslout = sslsocket.getOutputStream();
-				ObjectOutputStream objOut = new ObjectOutputStream(sslout);
-				
-				InputStream sslIn = sslsocket.getInputStream();
-				ObjectInputStream objIn = new ObjectInputStream(sslIn);
-		
-	            Request request = null;
-	            Reply response = null;
-	            request = (Request)objIn.readObject();
-            	response = processRequest(request);
-            	objOut.writeObject(response);
-	        
+	private static void run() {
+		try {
+						
+			OutputStream sslout = sslsocket.getOutputStream();
+			ObjectOutputStream objOut = new ObjectOutputStream(sslout);
+
+			InputStream sslIn = sslsocket.getInputStream();
+			ObjectInputStream objIn = new ObjectInputStream(sslIn);
+
+			Request request = null;
+			Reply response = null;
+			while ((request = (Request) objIn.readObject()) != null) {
+				response = processRequest(request);
+				objOut.writeObject(response);
 			}
+		} catch (EOFException exception) {
+			//System.out.println("Goodbye");
+			//client just disconnected
 		} catch (Exception exception) {
+			System.out.println("Exiting Server");
 			exception.printStackTrace();
 		}
 	}
@@ -596,6 +596,25 @@ public class dataServer {
 	    cOut.write(s);
 	    cOut.close();
 	    return new String(bOut.toByteArray());
+	}
+
+	private static SSLServerSocket handshake() {
+		try {
+			SSLServerSocketFactory sslserversocketfactory = 
+				(SSLServerSocketFactory) SSLServerSocketFactory.getDefault();
+			
+			SSLServerSocket sslserversocket = 
+				(SSLServerSocket) sslserversocketfactory.createServerSocket(9996);
+			
+			String[] enabledCipherSuites = { "SSL_DH_anon_WITH_RC4_128_MD5" };
+			sslserversocket.setEnabledCipherSuites(enabledCipherSuites);
+
+			return sslserversocket;
+		
+		} catch (Exception exception) {
+			exception.printStackTrace();
+			return null;
+		}
 	}
 }
 

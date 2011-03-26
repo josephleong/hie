@@ -42,12 +42,20 @@ public class HISPagent {
             String username = bufferedreader.readLine();
             System.out.println("Password?");
             String password = bufferedreader.readLine();
-           
-            Request request =  createRequest(username, password);
-            objOut.writeObject(request);
-            response = (Reply)objIn.readObject();
-        	System.out.println(response.getMessage());
 
+            System.out.println("");
+            
+            Request request = null;
+			while (true) {
+				request = createRequest(username, password);
+				if (request != null) {
+					objOut.writeObject(request);
+					response = (Reply) objIn.readObject();
+					System.out.println(response.getMessage());
+					System.out.println("Press any key to continue.");
+					bufferedreader.read();
+				}
+			}
              
         } catch (Exception exception) {
             exception.printStackTrace();
@@ -59,53 +67,65 @@ public class HISPagent {
 		Request request = null;
 		InputStreamReader inputstreamreader = new InputStreamReader(inputstream);
 		BufferedReader bufferedreader = new BufferedReader(inputstreamreader);
-		System.out.println("'create' EHR\n'grant read' access to an EHR\n'revoke read' access to an EHR\n'grant write' access to an EHR\n'revoke write' access to an EHR\n'view' an EHR\n'add' information to an EHR");
+		System.out.println("\n" +
+				"(1) 'view' an EHR\n" +
+				"(2) 'create' EHR\n" +
+				"(3) 'grant read' access to an EHR\n" +
+				"(4) 'revoke read' access to an EHR\n" +
+				"(5) 'grant write' access to an EHR\n" +
+				"(6) 'revoke write' access to an EHR\n" +
+				"(7) 'add' information to an EHR\n" +
+				"(8) 'quit'");
 		String command = bufferedreader.readLine();
-		if(command.equals("create"))
+		if(command.equals("create") || command.equals("1"))
 			request = new CreateRecord(username, password);
-		else if(command.equals("view")) {
+		else if(command.equals("view") || command.equals("2")) {
 			System.out.println("What is the patients userId?");
 			String patientId = bufferedreader.readLine();
 			request = new ReadRecord(username, password, patientId);
 		}
-		else if(command.equals("grant read")) {
+		else if(command.equals("grant read") || command.equals("3")) {
 			System.out.println("What is the agent's userId?");
 			String agentId = bufferedreader.readLine();
 			System.out.println("What is the patients userId?");
 			String patientId = bufferedreader.readLine();
 			request = new GrantReadAccess(username, password, agentId, patientId);
 		}
-		else if(command.equals("revoke read")) {
+		else if(command.equals("revoke read") || command.equals("4")) {
 			System.out.println("What is the agent's userId?");
 			String agentId = bufferedreader.readLine();
 			System.out.println("What is the patients userId?");
 			String patientId = bufferedreader.readLine();
 			request = new RevokeReadAccess(username, password, agentId, patientId);
 		}
-		else if(command.equals("grant write")) {
+		else if(command.equals("grant write") || command.equals("5")) {
 			System.out.println("What is the agent's userId?");
 			String agentId = bufferedreader.readLine();
 			System.out.println("What is the patients userId?");
 			String patientId = bufferedreader.readLine();
 			request = new GrantWriteAccess(username, password, agentId, patientId);
 		}
-		else if(command.equals("revoke write")) {
+		else if(command.equals("revoke write") || command.equals("6")) {
 			System.out.println("What is the agent's userId?");
 			String agentId = bufferedreader.readLine();
 			System.out.println("What is the patients userId?");
 			String patientId = bufferedreader.readLine();
 			request = new RevokeWriteAccess(username, password, agentId, patientId);
 		}
-		else if(command.equals("add")) {
+		else if(command.equals("add") || command.equals("7")) {
 			System.out.println("What is the patients userId?");
 			String patientId = bufferedreader.readLine();
 			System.out.println("What would you like to add?");
 			String info = bufferedreader.readLine();
 			request = new UpdateRecord(username, password, patientId, info);
 		}
+		else if(command.equals("quit") || command.equals("8")) {
+			System.out.println("Goodbye.");
+			System.exit(1);
+		}
 		else{
 			System.out.print("Invalid command!");
-			System.exit(1);
+			return null;
 		}
 			
 		return request;
