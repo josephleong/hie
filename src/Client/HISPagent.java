@@ -86,13 +86,13 @@ public class HISPagent {
 				"(7) 'add' information to an EHR\n" +
 				"(8) 'quit'");
 		String command = bufferedreader.readLine();
-		if(command.equals("create") || command.equals("1"))
-			request = new CreateRecord(username, password);
-		else if(command.equals("view") || command.equals("2")) {
+		if(command.equals("view") || command.equals("1")) {
 			System.out.println("What is the patients userId?");
 			String patientId = bufferedreader.readLine();
 			request = new ReadRecord(username, password, patientId);
 		}
+		else if(command.equals("create") || command.equals("2"))
+			request = new CreateRecord(username, password);
 		else if(command.equals("grant read") || command.equals("3")) {
 			System.out.println("What is the agent's userId?");
 			String agentId = bufferedreader.readLine();

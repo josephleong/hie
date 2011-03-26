@@ -10,6 +10,7 @@ import java.io.OutputStream;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 
+import Requests.PHRLogin;
 import Requests.ReadRecord;
 import Server.Reply;
 
@@ -31,11 +32,19 @@ class PHRagent {
             
            
             Reply response = null;
-
-            System.out.println("Username?");
-            String username = bufferedreader.readLine();
-            System.out.println("Password?");
-            String password = bufferedreader.readLine();
+            String username = "";
+            String password = "";
+            do {
+				System.out.println("Username?");
+				username = bufferedreader.readLine();
+				System.out.println("Password?");
+				password = bufferedreader.readLine();
+				objOut.writeObject(new PHRLogin(username, password));
+				response = (Reply) objIn.readObject();
+				System.out.println(response.getMessage());
+				System.out.println();
+			} while (response.equals(new Reply("Invalid User Login")));
+                       
             ReadRecord request= new ReadRecord(username, password);	
             objOut.writeObject(request);
             response = (Reply)objIn.readObject();

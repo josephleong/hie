@@ -85,80 +85,61 @@ public class dataServer {
 	
 	private static Reply processRequest(Request request) throws NoSuchAlgorithmException {
 		Reply response = null;
+		boolean valid = false;
 		if(request instanceof ReadRecord) {
 			request = (ReadRecord) request;
 			if(((ReadRecord) request).getRecordId() == null){
-				boolean valid = checkPHRUser(request.getUserid(), request.getPassword());
+				valid = checkPHRUser(request.getUserid(), request.getPassword());
 				if(valid)
 					response = getRecord(request.getUserid());
-				else
-					response = new Reply("Invalid User Login");
 			}
 			else {
-				boolean valid = checkHISPUser(request.getUserid(), request.getPassword());
+				 valid = checkHISPUser(request.getUserid(), request.getPassword());
 				if(valid)
 					response = getRecord(((ReadRecord)request).getRecordId(), request.getUserid());
-				else
-					response = new Reply("Invalid User Login");
 			}
 		}
 		else if(request instanceof CreateRecord) {
-			boolean valid = checkHISPUser(request.getUserid(), request.getPassword());
+			valid = checkHISPUser(request.getUserid(), request.getPassword());
 			if(valid)
 				response = createRecord((CreateRecord)request);
-			else
-				response = new Reply("Invalid User Login");
 		}
 		else if(request instanceof GrantReadAccess) {
-			boolean valid = checkHISPUser(request.getUserid(), request.getPassword());
+			valid = checkHISPUser(request.getUserid(), request.getPassword());
 			if(valid)
 				response = grantReadAccess((GrantReadAccess)request);
-			else
-				response = new Reply("Invalid User Login");
 		}
 		else if(request instanceof RevokeReadAccess) {
-			boolean valid = checkHISPUser(request.getUserid(), request.getPassword());
+			valid = checkHISPUser(request.getUserid(), request.getPassword());
 			if(valid)
 				response = revokeReadAccess((RevokeReadAccess)request);
-			else
-				response = new Reply("Invalid User Login");
 		}
 		else if(request instanceof GrantWriteAccess) {
-			boolean valid = checkHISPUser(request.getUserid(), request.getPassword());
+			valid = checkHISPUser(request.getUserid(), request.getPassword());
 			if(valid)
 				response = grantWriteAccess((GrantWriteAccess)request);
-			else
-				response = new Reply("Invalid User Login");
 		}
 		else if(request instanceof RevokeWriteAccess) {
-			boolean valid = checkHISPUser(request.getUserid(), request.getPassword());
+			valid = checkHISPUser(request.getUserid(), request.getPassword());
 			if(valid)
 				response = revokeWriteAccess((RevokeWriteAccess)request);
-			else
-				response = new Reply("Invalid User Login");
 		}
 		else if(request instanceof UpdateRecord) {
-			boolean valid = checkHISPUser(request.getUserid(), request.getPassword());
+			valid = checkHISPUser(request.getUserid(), request.getPassword());
 			if(valid)
 				response = updateRecord((UpdateRecord)request);
-			else
-				response = new Reply("Invalid User Login");
 		}
 		else if(request instanceof HISPLogin) {
-			boolean valid = checkHISPUser(request.getUserid(), request.getPassword());
+			valid = checkHISPUser(request.getUserid(), request.getPassword());
 			if(valid)
 				response = new Reply("Welcome!");
-			else
-				response = new Reply("Invalid User Login");
 		}
 		else if(request instanceof PHRLogin) {
-			boolean valid = checkPHRUser(request.getUserid(), request.getPassword());
+			valid = checkPHRUser(request.getUserid(), request.getPassword());
 			if(valid)
-				response = new Reply("Welcome!");
-			else
-				response = new Reply("Invalid User Login");
+				response = new Reply("Welcome!");				
 		}
-			
+		if(!valid) response = new Reply("Invalid User Login");	
 		return response;
 	}
 	
