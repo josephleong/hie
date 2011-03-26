@@ -24,4 +24,10 @@ public class Reply implements Serializable {
 	public String toString() {
 		return message;
 	}
+	
+	public boolean equals(Object o) {
+		if(o instanceof Reply)
+			return ((Reply)o).getMessage().equals(this.getMessage());
+		return false;
+	}
 }

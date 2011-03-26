@@ -13,6 +13,7 @@ import javax.net.ssl.SSLSocketFactory;
 import Requests.CreateRecord;
 import Requests.GrantReadAccess;
 import Requests.GrantWriteAccess;
+import Requests.HISPLogin;
 import Requests.ReadRecord;
 import Requests.Request;
 import Requests.RevokeReadAccess;
@@ -37,16 +38,24 @@ public class HISPagent {
             
            
             Reply response = null;
-            
-            System.out.println("Username?");
-            String username = bufferedreader.readLine();
-            System.out.println("Password?");
-            String password = bufferedreader.readLine();
-
-            System.out.println("");
-            
             Request request = null;
-			while (true) {
+            String username = "";
+            String password = "";
+			
+            do {
+				System.out.println("Username?");
+				username = bufferedreader.readLine();
+				System.out.println("Password?");
+				password = bufferedreader.readLine();
+				objOut.writeObject(new HISPLogin(username, password));
+				response = (Reply) objIn.readObject();
+				System.out.println(response.getMessage());
+				System.out.println();
+			} while (response.equals(new Reply("Invalid User Login")));
+       
+            
+            while (true) {
+				System.out.println("");
 				request = createRequest(username, password);
 				if (request != null) {
 					objOut.writeObject(request);

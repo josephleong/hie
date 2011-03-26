@@ -34,6 +34,8 @@ import javax.net.ssl.SSLSocket;
 import Requests.CreateRecord;
 import Requests.GrantReadAccess;
 import Requests.GrantWriteAccess;
+import Requests.HISPLogin;
+import Requests.PHRLogin;
 import Requests.ReadRecord;
 import Requests.Request;
 import Requests.RevokeReadAccess;
@@ -139,6 +141,20 @@ public class dataServer {
 			boolean valid = checkHISPUser(request.getUserid(), request.getPassword());
 			if(valid)
 				response = updateRecord((UpdateRecord)request);
+			else
+				response = new Reply("Invalid User Login");
+		}
+		else if(request instanceof HISPLogin) {
+			boolean valid = checkHISPUser(request.getUserid(), request.getPassword());
+			if(valid)
+				response = new Reply("Welcome!");
+			else
+				response = new Reply("Invalid User Login");
+		}
+		else if(request instanceof PHRLogin) {
+			boolean valid = checkPHRUser(request.getUserid(), request.getPassword());
+			if(valid)
+				response = new Reply("Welcome!");
 			else
 				response = new Reply("Invalid User Login");
 		}
