@@ -100,7 +100,7 @@ public class dataServer {
 			}
 		}
 		else if(request instanceof CreateRecord) {
-			valid = checkHISPUser(request.getUserid(), request.getPassword());
+			valid = (checkHISPUser(request.getUserid(), request.getPassword()) && userIsADoctor(request.getUserid());
 			if(valid)
 				response = createRecord((CreateRecord)request);
 		}
@@ -141,6 +141,42 @@ public class dataServer {
 		}
 		if(!valid) response = new Reply("Invalid User Login");	
 		return response;
+	}
+	
+	private static boolean userIsADoctor(String userId){
+		Connection connection = null;
+		ResultSet resultSet = null;
+		Statement statement = null;
+		boolean check = false;
+		try {
+			Class.forName("org.sqlite.JDBC");
+			connection = DriverManager
+					.getConnection("jdbc:sqlite:HISP.db");
+			statement = connection.createStatement();
+	        resultSet = statement.executeQuery("select type from users where username = '" + username + "';");
+	        if(resultSet.next()){
+		        if(resultSet.getString("type").equals("doctor"))
+		        	check = true;
+		        else
+		        	check = false;
+		        
+		     //   resultSet.close();
+	        }
+	        else
+	        	check = false;
+		           
+	       
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			try {
+				statement.close();
+				connection.close();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+		return check;
 	}
 	
 	private static Reply updateRecord(UpdateRecord request) {

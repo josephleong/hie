@@ -31,15 +31,21 @@ public class AuthDbHISP {
         Connection conn = DriverManager.getConnection("jdbc:sqlite:HISP.db");
         Statement stat = conn.createStatement();
         stat.executeUpdate("drop table if exists users;");
-        stat.executeUpdate("create table users (username, password);");
+        stat.executeUpdate("create table users (username, password, type);");
         PreparedStatement prep = conn.prepareStatement(
-            "insert into users values (?, ?);");
+            "insert into users values (?, ?, ?);");
 
         prep.setString(1, "Doctor1");
         prep.setString(2, hashtext);
+        prep.setString(3, "doctor");
         prep.addBatch();
         prep.setString(1, "Doctor2");
         prep.setString(2, hashtext2);
+        prep.setString(3, "doctor");
+        prep.addBatch();
+        prep.setString(1, "Nurse1");
+        prep.setString(2, hashtext);
+        prep.setString(3, "nurse");
         prep.addBatch();
 
         conn.setAutoCommit(false);
