@@ -678,7 +678,7 @@ public class dataServer {
 	}
 	
 	private static String decrypt(byte[] s) throws InvalidKeyException, InvalidAlgorithmParameterException, NoSuchAlgorithmException, NoSuchProviderException, NoSuchPaddingException, IOException {
-		Cipher cipher = Cipher.getInstance("AES/CTR/NoPadding");
+		Cipher cipher = Cipher.getInstance("AES");
 		// decryption pass
 		SecretKeySpec key = new SecretKeySpec(keyBytes, "AES");
 	    IvParameterSpec ivSpec = new IvParameterSpec(ivBytes);
