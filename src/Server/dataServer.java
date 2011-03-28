@@ -20,6 +20,9 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.logging.FileHandler;
+import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
 
 import javax.crypto.Cipher;
 import javax.crypto.CipherInputStream;
@@ -84,68 +87,96 @@ public class dataServer {
 	}
 	
 	private static Reply processRequest(Request request) throws NoSuchAlgorithmException {
-		Reply response = null;
-		boolean valid = false;
-		boolean isDoc = userIsADoctor(request.getUserid());
-		if(request instanceof ReadRecord) {
-			request = (ReadRecord) request;
-			if(((ReadRecord) request).getRecordId() == null){
+		Reply response = new Reply("Error Processing Request.");
+		try {
+			FileHandler fh = new FileHandler("log.txt", true);
+			fh.setFormatter(new SimpleFormatter());
+			Logger logger = Logger.getLogger("HIE Log");
+			logger.addHandler(fh);
+		
+		
+			boolean valid = false;
+			boolean isDoc = userIsADoctor(request.getUserid());
+			if(request instanceof ReadRecord) {
+				request = (ReadRecord) request;
+				if(((ReadRecord) request).getRecordId() == null){
+					valid = checkPHRUser(request.getUserid(), request.getPassword());
+					if(valid) {
+						response = getRecord(request.getUserid());
+						logger.info(request.getUserid() + " READ record " + ((ReadRecord)request).getRecordId());
+					}
+				}
+				else {
+					 valid = checkHISPUser(request.getUserid(), request.getPassword());
+					if(valid) {
+						response = getRecord(((ReadRecord)request).getRecordId(), request.getUserid());
+						logger.info(request.getUserid() + " READ record " + ((ReadRecord)request).getRecordId());
+					}
+				}
+				
+			}
+			else if(request instanceof CreateRecord) {
+				valid = (checkHISPUser(request.getUserid(), request.getPassword()) && userIsADoctor(request.getUserid()));
+				if(valid && isDoc) {
+					response = createRecord((CreateRecord)request);
+					logger.info(request.getUserid() + " CREATE record " + ((CreateRecord)request).getPatientId());
+				}
+				else if(valid && !isDoc) response = new Reply("Invalid User Login.");
+			}
+			else if(request instanceof GrantReadAccess) {
+				valid = checkHISPUser(request.getUserid(), request.getPassword());
+				if(valid && isDoc) {
+					response = grantReadAccess((GrantReadAccess)request);
+					logger.info(request.getUserid() + " GRANT READ " + ((GrantReadAccess)request).getGranteeId());
+				}
+				else if(valid && !isDoc) response = new Reply("Invalid User Login.");
+			}
+			else if(request instanceof RevokeReadAccess) {
+				valid = checkHISPUser(request.getUserid(), request.getPassword());
+				if(valid && isDoc) {
+					response = revokeReadAccess((RevokeReadAccess)request);
+					logger.info(request.getUserid() + " REVOKE READ " + ((RevokeReadAccess)request).getGranteeId());
+				}
+				else if(valid && !isDoc) response = new Reply("Invalid User Login.");
+			}
+			else if(request instanceof GrantWriteAccess) {
+				valid = checkHISPUser(request.getUserid(), request.getPassword());
+				if(valid && isDoc) {
+					response = grantWriteAccess((GrantWriteAccess)request);
+					logger.info(request.getUserid() + " GRANT WRITE " + ((GrantWriteAccess)request).getGranteeId());
+				}
+				else if(valid && !isDoc) response = new Reply("Invalid User Login.");
+			}
+			else if(request instanceof RevokeWriteAccess) {
+				valid = checkHISPUser(request.getUserid(), request.getPassword());
+				if(valid && isDoc) {
+					response = revokeWriteAccess((RevokeWriteAccess)request);
+					logger.info(request.getUserid() + " REVOKE WRITE " + ((RevokeWriteAccess)request).getGranteeId());
+				}
+				else if(valid && !isDoc) response = new Reply("Invalid User Login.");
+			}
+			else if(request instanceof UpdateRecord) {
+				valid = checkHISPUser(request.getUserid(), request.getPassword());
+				if(valid) {
+					response = updateRecord((UpdateRecord)request);
+					logger.info(request.getUserid() + " UPDATE record " + ((UpdateRecord)request).getPatientId());
+				}
+			}
+			else if(request instanceof HISPLogin) {
+				valid = checkHISPUser(request.getUserid(), request.getPassword());
+				if(valid)
+					response = new Reply("Welcome!");
+			}
+			else if(request instanceof PHRLogin) {
 				valid = checkPHRUser(request.getUserid(), request.getPassword());
 				if(valid)
-					response = getRecord(request.getUserid());
+					response = new Reply("Welcome!");				
 			}
-			else {
-				 valid = checkHISPUser(request.getUserid(), request.getPassword());
-				if(valid)
-					response = getRecord(((ReadRecord)request).getRecordId(), request.getUserid());
-			}
+			if(!valid) response = new Reply("Invalid User Login");	
+			
+		} catch (Exception e) {
+			e.printStackTrace();
 		}
-		else if(request instanceof CreateRecord) {
-			valid = (checkHISPUser(request.getUserid(), request.getPassword()) && userIsADoctor(request.getUserid()));
-			if(valid && isDoc)
-				response = createRecord((CreateRecord)request);
-			else if(valid && !isDoc) response = new Reply("Invalid User Login.");
-		}
-		else if(request instanceof GrantReadAccess) {
-			valid = checkHISPUser(request.getUserid(), request.getPassword());
-			if(valid && isDoc)
-				response = grantReadAccess((GrantReadAccess)request);
-			else if(valid && !isDoc) response = new Reply("Invalid User Login.");
-		}
-		else if(request instanceof RevokeReadAccess) {
-			valid = checkHISPUser(request.getUserid(), request.getPassword());
-			if(valid && isDoc)
-				response = revokeReadAccess((RevokeReadAccess)request);
-			else if(valid && !isDoc) response = new Reply("Invalid User Login.");
-		}
-		else if(request instanceof GrantWriteAccess) {
-			valid = checkHISPUser(request.getUserid(), request.getPassword());
-			if(valid && isDoc)
-				response = grantWriteAccess((GrantWriteAccess)request);
-			else if(valid && !isDoc) response = new Reply("Invalid User Login.");
-		}
-		else if(request instanceof RevokeWriteAccess) {
-			valid = checkHISPUser(request.getUserid(), request.getPassword());
-			if(valid && isDoc)
-				response = revokeWriteAccess((RevokeWriteAccess)request);
-			else if(valid && !isDoc) response = new Reply("Invalid User Login.");
-		}
-		else if(request instanceof UpdateRecord) {
-			valid = checkHISPUser(request.getUserid(), request.getPassword());
-			if(valid)
-				response = updateRecord((UpdateRecord)request);
-		}
-		else if(request instanceof HISPLogin) {
-			valid = checkHISPUser(request.getUserid(), request.getPassword());
-			if(valid)
-				response = new Reply("Welcome!");
-		}
-		else if(request instanceof PHRLogin) {
-			valid = checkPHRUser(request.getUserid(), request.getPassword());
-			if(valid)
-				response = new Reply("Welcome!");				
-		}
-		if(!valid) response = new Reply("Invalid User Login");	
 		
 		return response;
 	}
@@ -190,7 +221,7 @@ public class dataServer {
 		Connection connection = null;
 		ResultSet resultSet = null;
 		Statement statement = null;
-		Reply response = null;
+		Reply response = new Reply("Error");
 		try {
 			Class.forName("org.sqlite.JDBC");
 			connection = DriverManager.getConnection("jdbc:sqlite:DS.db");
@@ -198,14 +229,34 @@ public class dataServer {
 	        resultSet = statement.executeQuery("select * from records where userId = '" + request.getPatientId() + "' and (owner = '"+ request.getUserid() + "' or '" + request.getUserid() + "' in (select agentId from writeAccess where userId = '" + request.getPatientId() + "'));");
 	        if(resultSet.next()){
 	        	//TODO: FIX!!!
-	        	String oldInfo = new String(decrypt(resultSet.getBytes("information")));
+	        	String oldInfo = (decrypt(resultSet.getBytes("information")));
 	        	String newInfo = oldInfo + request.getAddInfo();
-	        	statement.executeUpdate("update records set information = '" + new String(encrypt(newInfo)) + "' where userId = '" + request.getPatientId() + "';");
+	        	System.out.println(newInfo);
+	        	statement.executeUpdate("update records set information = '" + (encrypt(newInfo)) + "' where userId = '" + request.getPatientId() + "';");
 	        	response = new Reply("Update Successful");
 	        }
+	        
+
+//	        PreparedStatement prep = null;
+//	        if(resultSet.next()){
+//	          	String oldInfo = new String(decrypt(resultSet.getBytes("information")));
+//	        	String newInfo = oldInfo + request.getAddInfo();
+//	        	System.out.println(newInfo);
+//	            prep = connection.prepareStatement(
+//	            "update records set information = ? where userId = ?;");
+//
+//	    	    prep.setBytes(1, encrypt(newInfo));
+//	    	    prep.setString(2,request.getPatientId());
+//	    	    prep.addBatch();	    	
+//	    	    connection.setAutoCommit(false);
+//	    	    prep.executeBatch();
+//	    	    connection.setAutoCommit(true);
+//	    	    response = new Reply("Record succesfully updated!");
+//	        }           
+	        
 	        else
 	        	response = new Reply("Invalid Request.");
-		               
+	        
 		} catch (Exception e) {
 			e.printStackTrace();
 		} finally {
@@ -415,7 +466,7 @@ public class dataServer {
 			if(resultSet.next()){
 	        	response = new Reply("Record already exists, please restart and simply add data to it");
 	        }
-	        else
+	        else {
 	            prep = connection.prepareStatement(
 	            "insert into records values (?, ?, ?, ?);");
 
@@ -428,7 +479,7 @@ public class dataServer {
 	    	    prep.executeBatch();
 	    	    connection.setAutoCommit(true);
 	    	    response = new Reply("Record succesfully added!");
-
+	        }
 
 		} catch (Exception e) {
 			e.printStackTrace();
