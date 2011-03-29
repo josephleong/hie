@@ -7,7 +7,11 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Statement;
 import java.security.*;
-
+/**
+ * Creates a PHR authentication databse with a few sample users
+ *  @author Joseph Leong (leong1), Brett Stevens (steven10)
+ *
+ */
 public class AuthDbPHR {
     public static void main(String[] args) throws Exception {
     	

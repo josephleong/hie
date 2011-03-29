@@ -4,7 +4,11 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-
+/**
+ * The request to Create a record for a HISP agent
+ * @author Joseph Leong (leong1), Brett Stevens (steven10)
+ *
+ */
 @SuppressWarnings("serial")
 public class CreateRecord extends Request {
 	private String patientId;

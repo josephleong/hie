@@ -1,7 +1,10 @@
 package Server;
 import java.io.Serializable;
 
-
+/**
+ * Reply, which includes a String the informs the user of the success of the operation or the information they were trying to get
+ * @author Joseph Leong (leong1), Brett Stevens (steven10)
+ */
 @SuppressWarnings("serial")
 public class Reply implements Serializable {
 	private String message;

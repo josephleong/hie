@@ -22,8 +22,7 @@ import Requests.UpdateRecord;
 import Server.Reply;
 
 /**
- * DataServer, handles PHR and HISP requests and authenticates
- * then serves data from Data Store
+ * HISP client Agent, Handles all the operations a Hisp agent could make
  * 
  * @author Joseph Leong (leong1), Brett Stevens (steven10)
  *
@@ -80,7 +79,13 @@ public class HISPagent {
             exception.printStackTrace();
         }
     }
-    
+    /**
+     * Creates the HISP creates for a client
+     * @param username - The login of the HISP user
+     * @param password - The password of the HISP user
+     * @return - Returns the request of the operation the user wants to make
+     * @throws IOException
+     */
 	private static Request createRequest(String username, String password) throws IOException{
 		InputStream inputstream = System.in;
 		Request request = null;
@@ -149,7 +154,11 @@ public class HISPagent {
 			
 		return request;
 	}
-	
+	/**
+	 * Creates the ssl collection
+	 * @param ip - ip of the server
+	 * @return
+	 */
 	private static SSLSocket handshake(String ip) {
 		try {
 			SSLSocketFactory sslsocketfactory = (SSLSocketFactory) SSLSocketFactory.getDefault();

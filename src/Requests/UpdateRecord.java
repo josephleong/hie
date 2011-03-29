@@ -1,5 +1,10 @@
 package Requests;
 
+
+/**
+ * Request to Update the record information
+ * @author Joseph Leong (leong1), Brett Stevens (steven10)
+ */
 @SuppressWarnings("serial")
 public class UpdateRecord extends Request {
 	private String patientId;

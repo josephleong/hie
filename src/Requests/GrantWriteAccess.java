@@ -1,5 +1,8 @@
 package Requests;
-
+/**
+ * The request to Grant Read Access from a HISP user with write access to another
+ * @author Joseph Leong (leong1), Brett Stevens (steven10)
+ */
 @SuppressWarnings("serial")
 public class GrantWriteAccess extends Request {
 

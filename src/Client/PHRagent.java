@@ -15,8 +15,7 @@ import Requests.ReadRecord;
 import Server.Reply;
 
 /**
- * DataServer, handles PHR and HISP requests and authenticates
- * then serves data from Data Store
+ * PHR agent, Handles all the operations a PHR agent could make
  * 
  * @author Joseph Leong (leong1), Brett Stevens (steven10)
  *
@@ -64,7 +63,11 @@ public class PHRagent {
             exception.printStackTrace();
         }
     }
-    
+	/**
+	 * Creates the ssl collection
+	 * @param ip - ip of the server
+	 * @return
+	 */
 	private static SSLSocket handshake(String ip) {
 		try {
 			SSLSocketFactory sslsocketfactory = (SSLSocketFactory) SSLSocketFactory.getDefault();

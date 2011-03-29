@@ -1,5 +1,10 @@
 package Requests;
 
+
+/**
+ * Request to revoke Write access to a HISP agent, only possible as the owner of the record
+ * @author Joseph Leong (leong1), Brett Stevens (steven10)
+ */
 @SuppressWarnings("serial")
 public class RevokeWriteAccess extends Request {
 

@@ -17,7 +17,11 @@ import javax.crypto.CipherInputStream;
 import javax.crypto.CipherOutputStream;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.spec.SecretKeySpec;
-
+/**
+ * Creates a sample Data Store databse with a sample record
+ *  @author Joseph Leong (leong1), Brett Stevens (steven10)
+ *
+ */
 public class SampleEHRDBCreation {
 
 

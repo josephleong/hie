@@ -1,5 +1,9 @@
 package Requests;
 
+/**
+ * The request to read a EHR record from either a HISP user or the PHR patient
+ * @author Joseph Leong (leong1), Brett Stevens (steven10)
+ */
 @SuppressWarnings("serial")
 public class ReadRecord extends Request {
 	private String recordId;
