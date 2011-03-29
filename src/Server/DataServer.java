@@ -44,17 +44,23 @@ import Requests.RevokeReadAccess;
 import Requests.RevokeWriteAccess;
 import Requests.UpdateRecord;
 
+/**
+ * DataServer, handles PHR and HISP requests and authenticates
+ * then serves data from Data Store
+ * 
+ * @author Joseph Leong (leong1), Brett Stevens (steven10)
+ *
+ */
 public class DataServer implements Runnable {
 	
+	//AES Key
 	private static byte[] keyBytes = new byte[] { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09,
 	        0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17 };
-//	private static byte[] ivBytes = new byte[] { 0x00, 0x01, 0x02, 0x03, 0x00, 0x01, 0x02, 0x03, 0x00, 0x00, 0x00,
-//	        0x00, 0x00, 0x00, 0x00, 0x01 };
 	
 	private static SSLSocket sslsocket;
 	
 	public static void main(String[] args) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchProviderException, NoSuchPaddingException, InvalidAlgorithmParameterException, IOException {
-				
+		System.out.println("Server Started.");		
 		SSLServerSocket sslserversocket = handshake();
 		while(true){
 			SSLSocket socket = (SSLSocket) sslserversocket.accept();
@@ -78,25 +84,31 @@ public class DataServer implements Runnable {
 				objOut.writeObject(response);
 			}
 		} catch (EOFException exception) {
-			//System.out.println("Goodbye");
 			//client just disconnected
 		} catch (Exception exception) {
 			System.out.println("Exiting Server");
 			exception.printStackTrace();
 		}
 	}
+	
 	private DataServer(SSLSocket sock) {
 		sslsocket = sock;
 	}
+	
+	/**
+	 * Handles the client requests
+	 * Logs actions to DS.log for auditing
+	 * @param request - client request
+	 * @return - a Reply to a client based on the Request and information passed
+	 */
 	private static Reply processRequest(Request request) throws NoSuchAlgorithmException {
 		Reply response = new Reply("Error Processing Request.");
 		try {
 			FileHandler fh = new FileHandler("DS.log", true);
 			fh.setFormatter(new SimpleFormatter());
-			Logger logger = Logger.getLogger("HIE Log");
+			Logger logger = Logger.getLogger("DS Log");
 			logger.addHandler(fh);
-		
-		
+			
 			boolean valid = false;
 			boolean isDoc = userIsADoctor(request.getUserid());
 			if(request instanceof ReadRecord) {
@@ -115,7 +127,6 @@ public class DataServer implements Runnable {
 						logger.info(request.getUserid() + " READ record " + ((ReadRecord)request).getRecordId());
 					}
 				}
-				
 			}
 			else if(request instanceof CreateRecord) {
 				valid = (checkHISPUser(request.getUserid(), request.getPassword()) && userIsADoctor(request.getUserid()));
@@ -183,6 +194,11 @@ public class DataServer implements Runnable {
 		return response;
 	}
 	
+	/**
+	 * Checks to see if a user is a Doctor
+	 * @param userId
+	 * @return - true if userId corresponds to a doctor, false otherwise
+	 */
 	private static boolean userIsADoctor(String userId){
 		Connection connection = null;
 		ResultSet resultSet = null;
@@ -219,6 +235,11 @@ public class DataServer implements Runnable {
 		return check;
 	}
 	
+	/**
+	 * Updates an EHR record
+	 * @param request
+	 * @return - Server's Reply
+	 */
 	private static Reply updateRecord(UpdateRecord request) {
 		Connection connection = null;
 		ResultSet resultSet = null;
@@ -229,21 +250,12 @@ public class DataServer implements Runnable {
 			connection = DriverManager.getConnection("jdbc:sqlite:DS.db");
 			statement = connection.createStatement();
 	        resultSet = statement.executeQuery("select * from records where userId = '" + request.getPatientId() + "' and (owner = '"+ request.getUserid() + "' or '" + request.getUserid() + "' in (select agentId from writeAccess where userId = '" + request.getPatientId() + "'));");
-//	        if(resultSet.next()){
-//	        	String oldInfo = (decrypt(resultSet.getBytes("information")));
-//	        	String newInfo = oldInfo + request.getAddInfo();
-//	        	System.out.println(newInfo);
-//	        	statement.executeUpdate("update records set information = '" + (encrypt(newInfo)) + "' where userId = '" + request.getPatientId() + "';");
-//	        	response = new Reply("Update Successful");
-//	        }
-	        
 
 	        PreparedStatement prep = null;
 	        if(resultSet.next()){
 	          	String oldInfo = new String(decrypt(resultSet.getBytes("information")));
 	          	statement.close();
 	        	String newInfo = oldInfo + "\n" + request.getAddInfo();
-	        	//System.out.println(newInfo);
 	            prep = connection.prepareStatement(
 	            "update records set information = ? where userId = ?");
 
@@ -252,7 +264,6 @@ public class DataServer implements Runnable {
 	    	    prep.executeUpdate();
 	    	    response = new Reply("Record succesfully updated!");
 	        }           
-	        
 	        else
 	        	response = new Reply("Invalid Request.");
 	        
@@ -269,6 +280,12 @@ public class DataServer implements Runnable {
 		return response;
 	}
 	
+	/**
+	 * Checks to see if patientId's record was created by agentId
+	 * @param agentId
+	 * @param patientId
+	 * @return true if agent is the owner, false otherwise
+	 */
 	private static boolean isOwner(String agentId, String patientId) {
 		Connection connection = null;
 		ResultSet resultSet = null;
@@ -297,6 +314,11 @@ public class DataServer implements Runnable {
 		return false;
 	}
 	
+	/**
+	 * Revokes read access from non-owner agents
+	 * @param request
+	 * @return - Server's reply
+	 */
 	private static Reply revokeReadAccess(RevokeReadAccess request) {
 		if (!isOwner(request.getUserid(), request.getPatientId()))
 			return new Reply("Invalid Request");
@@ -332,7 +354,11 @@ public class DataServer implements Runnable {
 		return response;
 	}
 
-	
+	/**
+	 * Grants an agent write access to an EHR
+	 * @param request
+	 * @return - Server's reply
+	 */
 	private static Reply grantWriteAccess(GrantWriteAccess request) {
 		if (!isOwner(request.getUserid(), request.getPatientId()))
 			return new Reply("Invalid Request");
@@ -374,6 +400,11 @@ public class DataServer implements Runnable {
 		return response;
 	}
 	
+	/**
+	 * Revokes an agent's write access to an EHR
+	 * @param request
+	 * @return - Server's reply
+	 */
 	private static Reply revokeWriteAccess(RevokeWriteAccess request) {
 		if (!isOwner(request.getUserid(), request.getPatientId()))
 			return new Reply("Invalid Request");
@@ -409,7 +440,11 @@ public class DataServer implements Runnable {
 		return response;
 	}
 
-	
+	/**
+	 * Grants an agent read access to an EHR
+	 * @param request
+	 * @return - Server's reply
+	 */
 	private static Reply grantReadAccess(GrantReadAccess request) {
 		if (!isOwner(request.getUserid(), request.getPatientId()))
 			return new Reply("Invalid Request");
@@ -451,6 +486,11 @@ public class DataServer implements Runnable {
 		return response;
 	}
 	
+	/**
+	 * Creates an EHR
+	 * @param request
+	 * @return - Server's Reply
+	 */
 	private static Reply createRecord(CreateRecord request) {
 		Connection connection = null;
 		ResultSet resultSet = null;
@@ -492,7 +532,12 @@ public class DataServer implements Runnable {
 		}
 		return response;
 	}
-
+	
+	/**
+	 * Retrieves an EHR for a patient
+	 * @param userId the requested record's associated userId
+	 * @return - Server's Reply
+	 */
 	private static Reply getRecord(String userId) {
 		Connection connection = null;
 		ResultSet resultSet = null;
@@ -524,6 +569,12 @@ public class DataServer implements Runnable {
 		return response;
 	}
 	
+	/**
+	 * Retrieves an EHR for an agent
+	 * @param userId the requested record's associated userId
+	 * @param agent - the requesting agent's Id
+	 * @return - Server's Reply
+	 */
 	private static Reply getRecord(String userId, String agent) {
 		Connection connection = null;
 		ResultSet resultSet = null;
@@ -555,6 +606,11 @@ public class DataServer implements Runnable {
 		return response;
 	}
 
+	/**
+	 * Formats a request into a human-readable string
+	 * @param resultSet - query resultSet
+	 * @return a string result
+	 */
 	private static String recordToString(ResultSet resultSet) throws SQLException, InvalidKeyException, InvalidAlgorithmParameterException, NoSuchAlgorithmException, NoSuchProviderException, NoSuchPaddingException, IOException {
 		String message = "UserId: " + resultSet.getString("userId") + "\n";
 		message += "Encryption Key Id: " + resultSet.getLong("encryptionKeyId") + "\n"; 
@@ -563,6 +619,12 @@ public class DataServer implements Runnable {
 		return message;
 	}
 	
+	/**
+	 * Authenticates a PHRUser
+	 * @param username
+	 * @param password
+	 * @return - true if authorized, false otherwise
+	 */
 	private static boolean checkPHRUser(String username, String password) throws NoSuchAlgorithmException{
 		MessageDigest m = MessageDigest.getInstance("MD5");
     	m.reset();
@@ -586,8 +648,7 @@ public class DataServer implements Runnable {
 		        	check = true;
 		        else
 		        	check = false;
-		        
-		     //   resultSet.close();
+
 	        }
 	        else
 	        	check = false;
@@ -606,6 +667,12 @@ public class DataServer implements Runnable {
 		return check;
 	}
 	
+	/**
+	 * Authenticates a HISPUser
+	 * @param username
+	 * @param password
+	 * @return - true if authorized, false otherwise
+	 */
 	private static boolean checkHISPUser(String username, String password) throws NoSuchAlgorithmException{
 		MessageDigest m = MessageDigest.getInstance("MD5");
     	m.reset();
@@ -629,8 +696,7 @@ public class DataServer implements Runnable {
 		        	check = true;
 		        else
 		        	check = false;
-		        
-		     //   resultSet.close();
+
 	        }
 	        else
 	        	check = false;
@@ -649,6 +715,11 @@ public class DataServer implements Runnable {
 		return check;
 	}
 	
+	/**
+	 * Encrypts a String via AES
+	 * @param s - to be encrypted
+	 * @return - a byte[] of the encrypted string
+	 */
 	private static byte[] encrypt(String s) throws IOException, NoSuchAlgorithmException, NoSuchProviderException, NoSuchPaddingException, InvalidKeyException, InvalidAlgorithmParameterException {
 		Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());        
 	    byte[] input = s.getBytes();
@@ -674,6 +745,11 @@ public class DataServer implements Runnable {
     
 	}
 	
+	/**
+	 * Decrypts a String via AES
+	 * @param s - to be decrypted
+	 * @return - a string of the decrypted byte[]
+	 */
 	private static String decrypt(byte[] s) throws InvalidKeyException, InvalidAlgorithmParameterException, NoSuchAlgorithmException, NoSuchProviderException, NoSuchPaddingException, IOException {
 		Cipher cipher = Cipher.getInstance("AES");
 		// decryption pass
@@ -687,6 +763,10 @@ public class DataServer implements Runnable {
 	    return new String(bOut.toByteArray());
 	}
 
+	/**
+	 * Handles setting up the SSL connection
+	 * @return - SSLServerSocket for the connection
+	 */
 	private static SSLServerSocket handshake() {
 		try {
 			SSLServerSocketFactory sslserversocketfactory = 

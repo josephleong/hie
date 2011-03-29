@@ -14,10 +14,16 @@ import Requests.PHRLogin;
 import Requests.ReadRecord;
 import Server.Reply;
 
-public
-class PHRagent {
+/**
+ * DataServer, handles PHR and HISP requests and authenticates
+ * then serves data from Data Store
+ * 
+ * @author Joseph Leong (leong1), Brett Stevens (steven10)
+ *
+ */
+public class PHRagent {
 	public static void main(String[] args) {
-		try {
+	try {
 			       
             InputStream inputstream = System.in;
             InputStreamReader inputstreamreader = new InputStreamReader(inputstream);

@@ -21,6 +21,13 @@ import Requests.RevokeWriteAccess;
 import Requests.UpdateRecord;
 import Server.Reply;
 
+/**
+ * DataServer, handles PHR and HISP requests and authenticates
+ * then serves data from Data Store
+ * 
+ * @author Joseph Leong (leong1), Brett Stevens (steven10)
+ *
+ */
 public class HISPagent {
 	public static void main(String[] args) {
 		try {
