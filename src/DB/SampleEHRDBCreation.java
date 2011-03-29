@@ -16,7 +16,6 @@ import javax.crypto.Cipher;
 import javax.crypto.CipherInputStream;
 import javax.crypto.CipherOutputStream;
 import javax.crypto.NoSuchPaddingException;
-import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
 public class SampleEHRDBCreation {
@@ -24,8 +23,8 @@ public class SampleEHRDBCreation {
 
 	private static byte[] keyBytes = new byte[] { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09,
 	        0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17 };
-	private static byte[] ivBytes = new byte[] { 0x00, 0x01, 0x02, 0x03, 0x00, 0x01, 0x02, 0x03, 0x00, 0x00, 0x00,
-	        0x00, 0x00, 0x00, 0x00, 0x01 };
+//	private static byte[] ivBytes = new byte[] { 0x00, 0x01, 0x02, 0x03, 0x00, 0x01, 0x02, 0x03, 0x00, 0x00, 0x00,
+//	        0x00, 0x00, 0x00, 0x00, 0x01 };
 
     public static void main(String[] args) throws Exception {
         Class.forName("org.sqlite.JDBC");
@@ -68,11 +67,11 @@ public class SampleEHRDBCreation {
         
         
         SecretKeySpec key = new SecretKeySpec(keyBytes, "AES");
-        IvParameterSpec ivSpec = new IvParameterSpec(ivBytes);
-        Cipher cipher = Cipher.getInstance("AES/CTR/NoPadding", "BC");
+//        IvParameterSpec ivSpec = new IvParameterSpec(ivBytes);
+        Cipher cipher = Cipher.getInstance("AES", "BC");
 
         // encryption pass
-        cipher.init(Cipher.ENCRYPT_MODE, key, ivSpec);
+        cipher.init(Cipher.ENCRYPT_MODE, key);
         ByteArrayInputStream bIn = new ByteArrayInputStream(input);
         CipherInputStream cIn = new CipherInputStream(bIn, cipher);
         ByteArrayOutputStream bOut = new ByteArrayOutputStream();
@@ -90,11 +89,11 @@ public class SampleEHRDBCreation {
     }
 
     private static String decrypt(byte[] s) throws InvalidKeyException, InvalidAlgorithmParameterException, NoSuchAlgorithmException, NoSuchProviderException, NoSuchPaddingException, IOException {
-    	Cipher cipher = Cipher.getInstance("AES/CTR/NoPadding", "BC");
+    	Cipher cipher = Cipher.getInstance("AES", "BC");
     	// decryption pass
     	SecretKeySpec key = new SecretKeySpec(keyBytes, "AES");
-        IvParameterSpec ivSpec = new IvParameterSpec(ivBytes);
-        cipher.init(Cipher.DECRYPT_MODE, key, ivSpec);
+//        IvParameterSpec ivSpec = new IvParameterSpec(ivBytes);
+        cipher.init(Cipher.DECRYPT_MODE, key);
         ByteArrayOutputStream bOut = new ByteArrayOutputStream();
         CipherOutputStream cOut = new CipherOutputStream(bOut, cipher);
         cOut.write(s);

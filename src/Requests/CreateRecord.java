@@ -8,7 +8,7 @@ import java.io.InputStreamReader;
 @SuppressWarnings("serial")
 public class CreateRecord extends Request {
 	private String patientId;
-	private long encryptionKeyId;
+	private long encryptionKeyId = 0;
 	private String information;
 
 	public CreateRecord(String userid, String password) throws IOException {
@@ -18,8 +18,8 @@ public class CreateRecord extends Request {
 		BufferedReader bufferedreader = new BufferedReader(inputstreamreader);
 		System.out.println("What is the patients userId?");
 		this.setPatientId(bufferedreader.readLine());
-		System.out.println("Generate encryption keyID! for now... input it");
-		this.setEncryptionKeyId(Long.parseLong(bufferedreader.readLine()));
+//		System.out.println("Generate encryption keyID! for now... input it");
+//		this.setEncryptionKeyId(Long.parseLong(bufferedreader.readLine()));
 		System.out.println("Input the health record information!");
 		this.setInformation(bufferedreader.readLine());
 	}

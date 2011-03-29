@@ -88,7 +88,7 @@ public class dataServer {
 	private static Reply processRequest(Request request) throws NoSuchAlgorithmException {
 		Reply response = new Reply("Error Processing Request.");
 		try {
-			FileHandler fh = new FileHandler("log.txt", true);
+			FileHandler fh = new FileHandler("DS.log", true);
 			fh.setFormatter(new SimpleFormatter());
 			Logger logger = Logger.getLogger("HIE Log");
 			logger.addHandler(fh);
@@ -239,8 +239,8 @@ public class dataServer {
 	        if(resultSet.next()){
 	          	String oldInfo = new String(decrypt(resultSet.getBytes("information")));
 	          	statement.close();
-	        	String newInfo = oldInfo + request.getAddInfo();
-	        	System.out.println(newInfo);
+	        	String newInfo = oldInfo + "\n" + request.getAddInfo();
+	        	//System.out.println(newInfo);
 	            prep = connection.prepareStatement(
 	            "update records set information = ? where userId = ?");
 
