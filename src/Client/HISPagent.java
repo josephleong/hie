@@ -31,8 +31,7 @@ import Server.Reply;
 public class HISPagent {
 	public static void main(String[] args) {
 		try {
-			
-            
+			            
             InputStream inputstream = System.in;
             InputStreamReader inputstreamreader = new InputStreamReader(inputstream);
             BufferedReader bufferedreader = new BufferedReader(inputstreamreader);
@@ -87,7 +86,7 @@ public class HISPagent {
 		Request request = null;
 		InputStreamReader inputstreamreader = new InputStreamReader(inputstream);
 		BufferedReader bufferedreader = new BufferedReader(inputstreamreader);
-		System.out.println("\n" +
+		System.out.println("" +
 				"(1) 'view' an EHR\n" +
 				"(2) 'create' EHR\n" +
 				"(3) 'grant read' access to an EHR\n" +
