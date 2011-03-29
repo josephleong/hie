@@ -61,7 +61,7 @@ public class HISPagent {
 					objOut.writeObject(request);
 					response = (Reply) objIn.readObject();
 					System.out.println(response.getMessage());
-					System.out.println("Press any key to continue.");
+					System.out.println("\nPress ENTER to continue.");
 					bufferedreader.read();
 				}
 			}

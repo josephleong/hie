@@ -28,7 +28,6 @@ import javax.crypto.Cipher;
 import javax.crypto.CipherInputStream;
 import javax.crypto.CipherOutputStream;
 import javax.crypto.NoSuchPaddingException;
-import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import javax.net.ssl.SSLServerSocket;
 import javax.net.ssl.SSLServerSocketFactory;
@@ -49,8 +48,8 @@ public class dataServer {
 	
 	private static byte[] keyBytes = new byte[] { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09,
 	        0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17 };
-	private static byte[] ivBytes = new byte[] { 0x00, 0x01, 0x02, 0x03, 0x00, 0x01, 0x02, 0x03, 0x00, 0x00, 0x00,
-	        0x00, 0x00, 0x00, 0x00, 0x01 };
+//	private static byte[] ivBytes = new byte[] { 0x00, 0x01, 0x02, 0x03, 0x00, 0x01, 0x02, 0x03, 0x00, 0x00, 0x00,
+//	        0x00, 0x00, 0x00, 0x00, 0x01 };
 	
 	private static SSLSocket sslsocket;
 	
@@ -227,32 +226,29 @@ public class dataServer {
 			connection = DriverManager.getConnection("jdbc:sqlite:DS.db");
 			statement = connection.createStatement();
 	        resultSet = statement.executeQuery("select * from records where userId = '" + request.getPatientId() + "' and (owner = '"+ request.getUserid() + "' or '" + request.getUserid() + "' in (select agentId from writeAccess where userId = '" + request.getPatientId() + "'));");
-	        if(resultSet.next()){
-	        	//TODO: FIX!!!
-	        	String oldInfo = (decrypt(resultSet.getBytes("information")));
-	        	String newInfo = oldInfo + request.getAddInfo();
-	        	System.out.println(newInfo);
-	        	statement.executeUpdate("update records set information = '" + (encrypt(newInfo)) + "' where userId = '" + request.getPatientId() + "';");
-	        	response = new Reply("Update Successful");
-	        }
-	        
-
-//	        PreparedStatement prep = null;
 //	        if(resultSet.next()){
-//	          	String oldInfo = new String(decrypt(resultSet.getBytes("information")));
+//	        	String oldInfo = (decrypt(resultSet.getBytes("information")));
 //	        	String newInfo = oldInfo + request.getAddInfo();
 //	        	System.out.println(newInfo);
-//	            prep = connection.prepareStatement(
-//	            "update records set information = ? where userId = ?;");
-//
-//	    	    prep.setBytes(1, encrypt(newInfo));
-//	    	    prep.setString(2,request.getPatientId());
-//	    	    prep.addBatch();	    	
-//	    	    connection.setAutoCommit(false);
-//	    	    prep.executeBatch();
-//	    	    connection.setAutoCommit(true);
-//	    	    response = new Reply("Record succesfully updated!");
-//	        }           
+//	        	statement.executeUpdate("update records set information = '" + (encrypt(newInfo)) + "' where userId = '" + request.getPatientId() + "';");
+//	        	response = new Reply("Update Successful");
+//	        }
+	        
+
+	        PreparedStatement prep = null;
+	        if(resultSet.next()){
+	          	String oldInfo = new String(decrypt(resultSet.getBytes("information")));
+	          	statement.close();
+	        	String newInfo = oldInfo + request.getAddInfo();
+	        	System.out.println(newInfo);
+	            prep = connection.prepareStatement(
+	            "update records set information = ? where userId = ?");
+
+	    	    prep.setBytes(1, encrypt(newInfo));
+	    	    prep.setString(2,request.getPatientId());
+	    	    prep.executeUpdate();
+	    	    response = new Reply("Record succesfully updated!");
+	        }           
 	        
 	        else
 	        	response = new Reply("Invalid Request.");
@@ -564,33 +560,6 @@ public class dataServer {
 		return message;
 	}
 	
-	private static byte[] encrypt(String s) throws IOException, NoSuchAlgorithmException, NoSuchProviderException, NoSuchPaddingException, InvalidKeyException, InvalidAlgorithmParameterException {
-		Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());        
-	    byte[] input = s.getBytes();
-	    
-	    
-	    SecretKeySpec key = new SecretKeySpec(keyBytes, "AES");
-	    IvParameterSpec ivSpec = new IvParameterSpec(ivBytes);
-	    Cipher cipher = Cipher.getInstance("AES/CTR/NoPadding", "BC");
-
-	    // encryption pass
-	    cipher.init(Cipher.ENCRYPT_MODE, key, ivSpec);
-	    ByteArrayInputStream bIn = new ByteArrayInputStream(input);
-	    CipherInputStream cIn = new CipherInputStream(bIn, cipher);
-	    ByteArrayOutputStream bOut = new ByteArrayOutputStream();
-
-	    int ch;
-	    while ((ch = cIn.read()) >= 0) {
-	      bOut.write(ch);
-	    }
-
-	    byte[] cipherText = bOut.toByteArray();
-
-	    return  (cipherText);
-
-	    
-	}
-	
 	private static boolean checkPHRUser(String username, String password) throws NoSuchAlgorithmException{
 		MessageDigest m = MessageDigest.getInstance("MD5");
     	m.reset();
@@ -677,12 +646,37 @@ public class dataServer {
 		return check;
 	}
 	
+	private static byte[] encrypt(String s) throws IOException, NoSuchAlgorithmException, NoSuchProviderException, NoSuchPaddingException, InvalidKeyException, InvalidAlgorithmParameterException {
+		Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());        
+	    byte[] input = s.getBytes();
+	    	    
+	    SecretKeySpec key = new SecretKeySpec(keyBytes, "AES");
+	    //IvParameterSpec ivSpec = new IvParameterSpec(ivBytes);
+	    Cipher cipher = Cipher.getInstance("AES", "BC");
+
+	    // encryption pass
+	    cipher.init(Cipher.ENCRYPT_MODE, key);
+	    ByteArrayInputStream bIn = new ByteArrayInputStream(input);
+	    CipherInputStream cIn = new CipherInputStream(bIn, cipher);
+	    ByteArrayOutputStream bOut = new ByteArrayOutputStream();
+
+	    int ch;
+	    while ((ch = cIn.read()) >= 0) {
+	      bOut.write(ch);
+	    }
+
+	    byte[] cipherText = bOut.toByteArray();
+
+	    return  (cipherText);
+    
+	}
+	
 	private static String decrypt(byte[] s) throws InvalidKeyException, InvalidAlgorithmParameterException, NoSuchAlgorithmException, NoSuchProviderException, NoSuchPaddingException, IOException {
 		Cipher cipher = Cipher.getInstance("AES");
 		// decryption pass
 		SecretKeySpec key = new SecretKeySpec(keyBytes, "AES");
-	    IvParameterSpec ivSpec = new IvParameterSpec(ivBytes);
-	    cipher.init(Cipher.DECRYPT_MODE, key, ivSpec);
+	    //IvParameterSpec ivSpec = new IvParameterSpec(ivBytes);
+	    cipher.init(Cipher.DECRYPT_MODE, key);
 	    ByteArrayOutputStream bOut = new ByteArrayOutputStream();
 	    CipherOutputStream cOut = new CipherOutputStream(bOut, cipher);
 	    cOut.write(s);
