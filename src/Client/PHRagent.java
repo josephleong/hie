@@ -18,12 +18,15 @@ public
 class PHRagent {
 	public static void main(String[] args) {
 		try {
-			SSLSocket sslsocket = handshake();
-            
+			       
             InputStream inputstream = System.in;
             InputStreamReader inputstreamreader = new InputStreamReader(inputstream);
             BufferedReader bufferedreader = new BufferedReader(inputstreamreader);
 
+            System.out.println("Please enter the IP of the server to connect to.");
+            String ip = bufferedreader.readLine();
+            SSLSocket sslsocket = handshake(ip);
+            
             OutputStream sslOut = sslsocket.getOutputStream();
             ObjectOutputStream objOut = new ObjectOutputStream(sslOut);
                        
@@ -56,10 +59,10 @@ class PHRagent {
         }
     }
     
-	private static SSLSocket handshake() {
+	private static SSLSocket handshake(String ip) {
 		try {
 			SSLSocketFactory sslsocketfactory = (SSLSocketFactory) SSLSocketFactory.getDefault();
-			SSLSocket sslsocket = (SSLSocket) sslsocketfactory.createSocket("localhost", 9996);
+			SSLSocket sslsocket = (SSLSocket) sslsocketfactory.createSocket(ip, 9996);
 			String[] enabledCipherSuites = { "SSL_DH_anon_WITH_RC4_128_MD5" };
 			sslsocket.setEnabledCipherSuites(enabledCipherSuites);
 			return sslsocket;
