@@ -8,7 +8,7 @@ import java.sql.ResultSet;
 import java.sql.Statement;
 import java.security.*;
 /**
- * Creates a PHR authentication databse with a few sample users
+ * Creates a PHR authentication database with a few sample users
  *  @author Joseph Leong (leong1), Brett Stevens (steven10)
  *
  */
