@@ -1,12 +1,8 @@
 package Server;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.EOFException;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
@@ -15,17 +11,10 @@ import java.io.OutputStream;
 import java.math.BigInteger;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
-import java.security.KeyFactory;
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
-import java.security.PrivateKey;
 import java.security.Security;
-import java.security.spec.InvalidKeySpecException;
-import java.security.spec.RSAPrivateKeySpec;
-import java.security.spec.RSAPublicKeySpec;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -44,6 +33,7 @@ import javax.crypto.spec.SecretKeySpec;
 import javax.net.ssl.SSLServerSocket;
 import javax.net.ssl.SSLServerSocketFactory;
 import javax.net.ssl.SSLSocket;
+import javax.net.ssl.SSLSocketFactory;
 
 import Requests.CreateRecord;
 import Requests.GrantReadAccess;
@@ -67,7 +57,7 @@ public class AuthServer implements Runnable {
 		sslsocket = sock;
 	}
 
-	public static void main(String[] args) throws IOException {
+	public static void main(String[] args) throws IOException, ClassNotFoundException {
 		System.out.println("Server Started.");
 		SSLServerSocket sslserversocket = handshake();
 		while (true) {
@@ -84,7 +74,7 @@ public class AuthServer implements Runnable {
 
 			InputStream sslIn = sslsocket.getInputStream();
 			ObjectInputStream objIn = new ObjectInputStream(sslIn);
-
+			
 			Request request = null;
 			Reply response = null;
 			while ((request = (Request) objIn.readObject()) != null) {
@@ -98,67 +88,62 @@ public class AuthServer implements Runnable {
 			exception.printStackTrace();
 		}
 	}
-
-	private static byte[] rsaDecrypt(byte[] data) {
+	
+	private static SSLSocket connectToDS(String ip) {
 		try {
-			PrivateKey privKey = readPrivKeyFromFile("private.key");
-			Cipher cipher = Cipher.getInstance("RSA");
-			cipher.init(Cipher.DECRYPT_MODE, privKey);
-			byte[] cipherData = cipher.doFinal(data);
-			return cipherData;
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		return null;
-	}
+			SSLSocketFactory sslsocketfactory = (SSLSocketFactory) SSLSocketFactory.getDefault();
+			SSLSocket sslsocket = (SSLSocket) sslsocketfactory.createSocket(ip, 9998);
+			String[] enabledCipherSuites = { "SSL_DH_anon_WITH_RC4_128_MD5" };
+			sslsocket.setEnabledCipherSuites(enabledCipherSuites);
+			
+			OutputStream sslout = sslsocket.getOutputStream();
+			ObjectOutputStream objOut = new ObjectOutputStream(sslout);
 
-	private static PrivateKey readPrivKeyFromFile(String keyFileName)
-			throws IOException {
-		InputStream in = new FileInputStream(keyFileName);
-		ObjectInputStream oin = new ObjectInputStream(new BufferedInputStream(
-				in));
-		try {
-			BigInteger m = (BigInteger) oin.readObject();
-			BigInteger e = (BigInteger) oin.readObject();
-			RSAPrivateKeySpec keySpec = new RSAPrivateKeySpec(m, e);
-			KeyFactory fact = KeyFactory.getInstance("RSA");
-			PrivateKey privKey = fact.generatePrivate(keySpec);
-			return privKey;
-		} catch (Exception e) {
-			throw new RuntimeException("Spurious serialisation error", e);
-		} finally {
-			oin.close();
+			InputStream sslIn = sslsocket.getInputStream();
+			ObjectInputStream objIn = new ObjectInputStream(sslIn);
+			
+			VerificationRequest theirVerificationRequest = (VerificationRequest) objIn.readObject();
+			objOut.writeObject(new String(Crypto.rsaDecrypt(theirVerificationRequest.getEncryptedMessage(), "authprivate.key")));
+			String randNum = Long.toString(((long)(Math.random()*Long.MAX_VALUE)));
+			objOut.writeObject(new VerificationRequest(Crypto.rsaEncrypt(randNum.getBytes(), "dspublic.key")));
+			String theirRandNum = (String) objIn.readObject();
+			if(!randNum.equals(theirRandNum)) {
+				System.out.println("Not Verified");
+				return null;
+			}
+			return sslsocket;
+		} catch (Exception exception) {
+			exception.printStackTrace();
+			return null;
 		}
 	}
-
-	@SuppressWarnings("unused")
-	private static void generateRSAKeys() throws NoSuchAlgorithmException,
-			InvalidKeySpecException, IOException {
-		KeyPairGenerator kpg = KeyPairGenerator.getInstance("RSA");
-		kpg.initialize(2048);
-		KeyPair kp = kpg.genKeyPair();
-
-		KeyFactory fact = KeyFactory.getInstance("RSA");
-		RSAPublicKeySpec pub = fact.getKeySpec(kp.getPublic(),
-				RSAPublicKeySpec.class);
-		RSAPrivateKeySpec priv = fact.getKeySpec(kp.getPrivate(),
-				RSAPrivateKeySpec.class);
-
-		saveToFile("public.key", pub.getModulus(), pub.getPublicExponent());
-		saveToFile("private.key", priv.getModulus(), priv.getPrivateExponent());
-	}
-
-	private static void saveToFile(String fileName, BigInteger mod,
-			BigInteger exp) throws IOException {
-		ObjectOutputStream oout = new ObjectOutputStream(
-				new BufferedOutputStream(new FileOutputStream(fileName)));
+	
+	private static SSLSocket connectToKS(String ip) {
 		try {
-			oout.writeObject(mod);
-			oout.writeObject(exp);
-		} catch (Exception e) {
-			throw new IOException("Unexpected error", e);
-		} finally {
-			oout.close();
+			SSLSocketFactory sslsocketfactory = (SSLSocketFactory) SSLSocketFactory.getDefault();
+			SSLSocket sslsocket = (SSLSocket) sslsocketfactory.createSocket(ip, 9997);
+			String[] enabledCipherSuites = { "SSL_DH_anon_WITH_RC4_128_MD5" };
+			sslsocket.setEnabledCipherSuites(enabledCipherSuites);
+			
+			OutputStream sslout = sslsocket.getOutputStream();
+			ObjectOutputStream objOut = new ObjectOutputStream(sslout);
+
+			InputStream sslIn = sslsocket.getInputStream();
+			ObjectInputStream objIn = new ObjectInputStream(sslIn);
+			
+			VerificationRequest theirVerificationRequest = (VerificationRequest) objIn.readObject();
+			objOut.writeObject(new String(Crypto.rsaDecrypt(theirVerificationRequest.getEncryptedMessage(), "authprivate.key")));
+			String randNum = Long.toString(((long)(Math.random()*Long.MAX_VALUE)));
+			objOut.writeObject(new VerificationRequest(Crypto.rsaEncrypt(randNum.getBytes(), "kspublic.key")));
+			String theirRandNum = (String) objIn.readObject();
+			if(!randNum.equals(theirRandNum)) {
+				System.out.println("Not Verified");
+				return null;
+			}
+			return sslsocket;
+		} catch (Exception exception) {
+			exception.printStackTrace();
+			return null;
 		}
 	}
 

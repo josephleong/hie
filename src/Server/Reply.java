@@ -14,7 +14,6 @@ public class Reply implements Serializable {
 		this.setMessage(message);
 	}
 
-
 	public void setMessage(String message) {
 		this.message = message;
 	}
