@@ -1,0 +1,18 @@
+KeyStore
+	key.db
+		keys
+			userId		key
+
+DataStore
+	ehr.db
+		records
+			userId		owner		|		name		age		weight		diagnosis		prescriptions		other
+
+AuthServer
+	user.db
+		phr
+			username		password
+		hisp
+			username		password		type
+		ra
+			username		password		columns		conditions
