@@ -37,6 +37,8 @@ import Requests.Request;
 public class DataServer implements Runnable {
 
 	private static SSLSocket sslsocket;
+	private static ObjectOutputStream objOut = null;
+	private static ObjectInputStream objIn = null;
 	
 	private DataServer(SSLSocket sock) {
 		sslsocket = sock;
@@ -58,10 +60,10 @@ public class DataServer implements Runnable {
 		try {
 
 			OutputStream sslout = sslsocket.getOutputStream();
-			ObjectOutputStream objOut = new ObjectOutputStream(sslout);
+			objOut = new ObjectOutputStream(sslout);
 
 			InputStream sslIn = sslsocket.getInputStream();
-			ObjectInputStream objIn = new ObjectInputStream(sslIn);
+			objIn = new ObjectInputStream(sslIn);
 
 			if(!verifyAuthServer(objOut, objIn)) { System.out.println("Couldn't Verify"); return; }
 
@@ -98,6 +100,20 @@ public class DataServer implements Runnable {
 		return true;
 	}
 
+	private static void logInfo(String entry) {
+		FileHandler fh;
+		try {
+			fh = new FileHandler("DS.log", true);
+			fh.setFormatter(new SimpleFormatter());
+			Logger logger = Logger.getLogger("DS Log");
+			logger.addHandler(fh);
+
+			logger.info(entry);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
 	/**
 	 * Handles the client requests Logs actions to DS.log for auditing
 	 * 
@@ -108,18 +124,12 @@ public class DataServer implements Runnable {
 	private static Reply processRequest(Request request) {
 		Reply response = new Reply("Error Processing Request.");
 		try {
-			FileHandler fh = new FileHandler("DS.log", true);
-			fh.setFormatter(new SimpleFormatter());
-			Logger logger = Logger.getLogger("DS Log");
-			logger.addHandler(fh);
-
-			if(request instanceof ReadRecord) {
+			if (request instanceof ReadRecord) {
 				request = (ReadRecord) request;
-				if (((ReadRecord) request).getRecordId() == null) {
-						response = getRecord(request.getUserid());
-						logger.info(request.getUserid() + " READ record "
-								+ ((ReadRecord) request).getRecordId());
-					}
+
+				response = getRecord(((ReadRecord) request).getRecordId());
+				logInfo("READ record "
+						+ ((ReadRecord) request).getRecordId());
 			}
 		} catch (Exception e) {
 			e.printStackTrace();

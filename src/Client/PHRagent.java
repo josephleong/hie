@@ -21,6 +21,8 @@ import Server.Reply;
  *
  */
 public class PHRagent {
+	private static final String ip = "localhost"; // IP of AuthServer
+	
 	public static void main(String[] args) {
 	try {
 			       
@@ -28,8 +30,8 @@ public class PHRagent {
             InputStreamReader inputstreamreader = new InputStreamReader(inputstream);
             BufferedReader bufferedreader = new BufferedReader(inputstreamreader);
 
-            System.out.println("Please enter the IP of the server to connect to.");
-            String ip = bufferedreader.readLine();
+//            System.out.println("Please enter the IP of the server to connect to.");
+//            String ip = bufferedreader.readLine();
             SSLSocket sslsocket = handshake(ip);
             
             OutputStream sslOut = sslsocket.getOutputStream();

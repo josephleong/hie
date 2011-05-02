@@ -82,24 +82,25 @@ public class Crypto {
 	/**
 	 * Decrypts a String via AES
 	 * 
-	 * @param s
-	 *            - to be decrypted
+	 * @param s - to be decrypted
 	 * @return - a string of the decrypted byte[]
 	 */
-	public static String decrypt(byte[] s, byte[] keyBytes)
-			throws InvalidKeyException, InvalidAlgorithmParameterException,
-			NoSuchAlgorithmException, NoSuchProviderException,
-			NoSuchPaddingException, IOException {
-		Cipher cipher = Cipher.getInstance("AES");
-		// decryption pass
-		SecretKeySpec key = new SecretKeySpec(keyBytes, "AES");
-		// IvParameterSpec ivSpec = new IvParameterSpec(ivBytes);
-		cipher.init(Cipher.DECRYPT_MODE, key);
-		ByteArrayOutputStream bOut = new ByteArrayOutputStream();
-		CipherOutputStream cOut = new CipherOutputStream(bOut, cipher);
-		cOut.write(s);
-		cOut.close();
-		return new String(bOut.toByteArray());
+	public static String decrypt(byte[] s, byte[] keyBytes) {
+		try {
+			Cipher cipher = Cipher.getInstance("AES");
+			// decryption pass
+			SecretKeySpec key = new SecretKeySpec(keyBytes, "AES");
+			cipher.init(Cipher.DECRYPT_MODE, key);
+			ByteArrayOutputStream bOut = new ByteArrayOutputStream();
+			CipherOutputStream cOut = new CipherOutputStream(bOut, cipher);
+			cOut.write(s);
+			cOut.close();
+			String res = new String(bOut.toByteArray());
+			return res;
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return null;
 	}
 
 	public static byte[] rsaDecrypt(byte[] data, String keyFileName) {

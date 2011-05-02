@@ -2,6 +2,7 @@ package Server;
 
 @SuppressWarnings("serial")
 public class EncryptedEHR extends Reply{
+	
 	private String userId;
 	private String owner;
 	private byte[] name; 
@@ -103,5 +104,7 @@ public class EncryptedEHR extends Reply{
 	public void setOther(byte[] other) {
 		this.other = other;
 	}
-	
+
+
+		
 }

@@ -61,7 +61,10 @@ public class KeyStore implements Runnable {
 			String request = (String) objIn.readObject();
 			if (request.equals("get")) {
 				String userIdOfRequest = (String) objIn.readObject();
-				objOut.writeObject(getKey(userIdOfRequest));
+				byte[] key = getKey(userIdOfRequest);
+				System.out.println(key);
+				objOut.writeObject(key);
+
 			} else if (request.equals("add")) {
 				String userId = (String) objIn.readObject();
 				byte[] key = (byte[]) objIn.readObject();

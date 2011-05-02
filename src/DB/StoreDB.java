@@ -21,13 +21,14 @@ public class StoreDB {
                
         byte[] key1 = Crypto.generateAESKey();
         byte[] key2 = Crypto.generateAESKey();
+        byte[] key3 = Crypto.generateAESKey();
                 
         PreparedStatement prep = conn.prepareStatement(
         "insert into records values (?, ?, ?, ?, ?, ?, ?, ?);");
 
-	    prep.setString(1, "1");
+	    prep.setString(1, "Patient1");
 	    prep.setString(2, "Doctor1");
-	    prep.setBytes(3, Crypto.encrypt("Patient1", key1));
+	    prep.setBytes(3, Crypto.encrypt("John", key1));
 	    prep.setBytes(4, Crypto.encrypt("25", key1));
 	    prep.setBytes(5, Crypto.encrypt("160", key1));
 	    prep.setBytes(6, Crypto.encrypt("Healthy", key1));
@@ -35,14 +36,24 @@ public class StoreDB {
 	    prep.setBytes(8, Crypto.encrypt("", key1));
 	    prep.addBatch();
 	    
-	    prep.setString(1, "2");
+	    prep.setString(1, "Patient2");
 	    prep.setString(2, "Doctor2");
-	    prep.setBytes(3, Crypto.encrypt("Patient2", key2));
+	    prep.setBytes(3, Crypto.encrypt("Jack", key2));
 	    prep.setBytes(4, Crypto.encrypt("125", key2));
 	    prep.setBytes(5, Crypto.encrypt("1160", key2));
 	    prep.setBytes(6, Crypto.encrypt("Dead", key2));
 	    prep.setBytes(7, Crypto.encrypt("Everything", key2));
 	    prep.setBytes(8, Crypto.encrypt("Condolences", key2));
+	    prep.addBatch();
+	    
+	    prep.setString(1, "a");
+	    prep.setString(2, "Doctor2");
+	    prep.setBytes(3, Crypto.encrypt("Joe", key3));
+	    prep.setBytes(4, Crypto.encrypt("21", key3));
+	    prep.setBytes(5, Crypto.encrypt("135", key3));
+	    prep.setBytes(6, Crypto.encrypt("Healthy", key3));
+	    prep.setBytes(7, Crypto.encrypt("Nothing", key3));
+	    prep.setBytes(8, Crypto.encrypt("Sicko!", key3));
 	    prep.addBatch();
 
 	    conn.setAutoCommit(false);
@@ -60,10 +71,13 @@ public class StoreDB {
         PreparedStatement prep2 = conn2.prepareStatement(
         "insert into keys values (?, ?);");
 
-	    prep2.setString(1, "1");
+        prep2.setString(1, "a");
+	    prep2.setBytes(2, key3);
+	    prep2.addBatch();
+	    prep2.setString(1, "Patient1");
 	    prep2.setBytes(2, key1);
 	    prep2.addBatch();
-	    prep2.setString(1, "2");
+	    prep2.setString(1, "Patient2");
 	    prep2.setBytes(2, key2);
 	    prep2.addBatch();
 	    

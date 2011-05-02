@@ -11,7 +11,6 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.sql.Connection;
 import java.sql.DriverManager;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Statement;
 import java.util.logging.FileHandler;
@@ -23,26 +22,20 @@ import javax.net.ssl.SSLServerSocketFactory;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 
-import Requests.CreateRecord;
-import Requests.GrantReadAccess;
-import Requests.GrantWriteAccess;
 import Requests.HISPLogin;
 import Requests.PHRLogin;
 import Requests.ReadRecord;
 import Requests.Request;
-import Requests.RevokeReadAccess;
-import Requests.RevokeWriteAccess;
-import Requests.UpdateRecord;
 
 public class AuthServer implements Runnable {
 	private static final String DSIP = "localhost";
 	private static final String KSIP = "localhost";
 	
 	private static SSLSocket sslsocket;
-	// AES Key
-	private static byte[] keyBytes = new byte[] { 0x00, 0x01, 0x02, 0x03, 0x04,
-			0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
-			0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17 };
+	private static ObjectOutputStream DSobjOut = null;
+	private static ObjectInputStream DSobjIn = null;
+	private static ObjectOutputStream KSobjOut = null;
+	private static ObjectInputStream KSobjIn = null;
 
 	private AuthServer(SSLSocket sock) {
 		sslsocket = sock;
@@ -62,9 +55,10 @@ public class AuthServer implements Runnable {
 
 			OutputStream sslout = sslsocket.getOutputStream();
 			ObjectOutputStream objOut = new ObjectOutputStream(sslout);
-
 			InputStream sslIn = sslsocket.getInputStream();
 			ObjectInputStream objIn = new ObjectInputStream(sslIn);
+			connectToDS(DSIP);
+			connectToKS(KSIP);
 			
 			Request request = null;
 			Reply response = null;
@@ -80,7 +74,7 @@ public class AuthServer implements Runnable {
 		}
 	}
 	
-	private static SSLSocket connectToDS(String ip) {
+	private static void connectToDS(String ip) {
 		try {
 			SSLSocketFactory sslsocketfactory = (SSLSocketFactory) SSLSocketFactory.getDefault();
 			SSLSocket sslsocket = (SSLSocket) sslsocketfactory.createSocket(ip, 9998);
@@ -88,28 +82,26 @@ public class AuthServer implements Runnable {
 			sslsocket.setEnabledCipherSuites(enabledCipherSuites);
 			
 			OutputStream sslout = sslsocket.getOutputStream();
-			ObjectOutputStream objOut = new ObjectOutputStream(sslout);
+			DSobjOut = new ObjectOutputStream(sslout);
 
 			InputStream sslIn = sslsocket.getInputStream();
-			ObjectInputStream objIn = new ObjectInputStream(sslIn);
+			DSobjIn = new ObjectInputStream(sslIn);
 			
-			VerificationRequest theirVerificationRequest = (VerificationRequest) objIn.readObject();
-			objOut.writeObject(new String(Crypto.rsaDecrypt(theirVerificationRequest.getEncryptedMessage(), "authprivate.key")));
+			VerificationRequest theirVerificationRequest = (VerificationRequest) DSobjIn.readObject();
+			DSobjOut.writeObject(new String(Crypto.rsaDecrypt(theirVerificationRequest.getEncryptedMessage(), "authprivate.key")));
 			String randNum = Long.toString(((long)(Math.random()*Long.MAX_VALUE)));
-			objOut.writeObject(new VerificationRequest(Crypto.rsaEncrypt(randNum.getBytes(), "dspublic.key")));
-			String theirRandNum = (String) objIn.readObject();
+			DSobjOut.writeObject(new VerificationRequest(Crypto.rsaEncrypt(randNum.getBytes(), "dspublic.key")));
+			String theirRandNum = (String) DSobjIn.readObject();
+			
 			if(!randNum.equals(theirRandNum)) {
 				System.out.println("Not Verified");
-				return null;
 			}
-			return sslsocket;
 		} catch (Exception exception) {
 			exception.printStackTrace();
-			return null;
 		}
 	}
 	
-	private static SSLSocket connectToKS(String ip) {
+	private static void connectToKS(String ip) {
 		try {
 			SSLSocketFactory sslsocketfactory = (SSLSocketFactory) SSLSocketFactory.getDefault();
 			SSLSocket sslsocket = (SSLSocket) sslsocketfactory.createSocket(ip, 9997);
@@ -117,24 +109,21 @@ public class AuthServer implements Runnable {
 			sslsocket.setEnabledCipherSuites(enabledCipherSuites);
 			
 			OutputStream sslout = sslsocket.getOutputStream();
-			ObjectOutputStream objOut = new ObjectOutputStream(sslout);
+			KSobjOut = new ObjectOutputStream(sslout);
 
 			InputStream sslIn = sslsocket.getInputStream();
-			ObjectInputStream objIn = new ObjectInputStream(sslIn);
+			KSobjIn = new ObjectInputStream(sslIn);
 			
-			VerificationRequest theirVerificationRequest = (VerificationRequest) objIn.readObject();
-			objOut.writeObject(new String(Crypto.rsaDecrypt(theirVerificationRequest.getEncryptedMessage(), "authprivate.key")));
+			VerificationRequest theirVerificationRequest = (VerificationRequest) KSobjIn.readObject();
+			KSobjOut.writeObject(new String(Crypto.rsaDecrypt(theirVerificationRequest.getEncryptedMessage(), "authprivate.key")));
 			String randNum = Long.toString(((long)(Math.random()*Long.MAX_VALUE)));
-			objOut.writeObject(new VerificationRequest(Crypto.rsaEncrypt(randNum.getBytes(), "kspublic.key")));
-			String theirRandNum = (String) objIn.readObject();
+			KSobjOut.writeObject(new VerificationRequest(Crypto.rsaEncrypt(randNum.getBytes(), "kspublic.key")));
+			String theirRandNum = (String) KSobjIn.readObject();
 			if(!randNum.equals(theirRandNum)) {
 				System.out.println("Not Verified");
-				return null;
 			}
-			return sslsocket;
 		} catch (Exception exception) {
 			exception.printStackTrace();
-			return null;
 		}
 	}
 
@@ -173,82 +162,24 @@ public class AuthServer implements Runnable {
 			throws NoSuchAlgorithmException {
 		Reply response = new Reply("Error Processing Request.");
 		try {
-			FileHandler fh = new FileHandler("AuthServer.log", true);
-			fh.setFormatter(new SimpleFormatter());
-			Logger logger = Logger.getLogger("AuthServer Log");
-			logger.addHandler(fh);
-
 			boolean valid = false;
-			boolean isDoc = userIsADoctor(request.getUserid());
+			//boolean isDoc = userIsADoctor(request.getUserid());
 			if (request instanceof ReadRecord) {
 				request = (ReadRecord) request;
 				if (((ReadRecord) request).getRecordId() == null) {
 					valid = checkPHRUser(request.getUserid(), request.getPassword());
 					if (valid) {
 						response = getRecord(request.getUserid());
-						logger.info(request.getUserid() + " READ record "+ ((ReadRecord) request).getRecordId());
+						logInfo(request.getUserid() + " READ record "+ ((ReadRecord) request).getUserid());
 					}
 				} else {
 					valid = checkHISPUser(request.getUserid(), request.getPassword());
 					valid = valid && hasReadAccess(request.getUserid(), ((ReadRecord) request).getRecordId());
 					if (valid) {
 						response = getRecord(((ReadRecord) request).getRecordId());
-						logger.info(request.getUserid() + " READ record "
+						logInfo(request.getUserid() + " READ record "
 								+ ((ReadRecord) request).getRecordId());
 					}
-				}
-			} else if (request instanceof CreateRecord) {
-				valid = (checkHISPUser(request.getUserid(), request
-						.getPassword()) && userIsADoctor(request.getUserid()));
-				if (valid && isDoc) {
-					response = createRecord((CreateRecord) request);
-					logger.info(request.getUserid() + " CREATE record "
-							+ ((CreateRecord) request).getPatientId());
-				} else if (valid && !isDoc)
-					response = new Reply("Invalid User Login.");
-			} else if (request instanceof GrantReadAccess) {
-				valid = checkHISPUser(request.getUserid(), request
-						.getPassword());
-				if (valid && isDoc) {
-					response = grantReadAccess((GrantReadAccess) request);
-					logger.info(request.getUserid() + " GRANT READ "
-							+ ((GrantReadAccess) request).getGranteeId());
-				} else if (valid && !isDoc)
-					response = new Reply("Invalid User Login.");
-			} else if (request instanceof RevokeReadAccess) {
-				valid = checkHISPUser(request.getUserid(), request
-						.getPassword());
-				if (valid && isDoc) {
-					response = revokeReadAccess((RevokeReadAccess) request);
-					logger.info(request.getUserid() + " REVOKE READ "
-							+ ((RevokeReadAccess) request).getGranteeId());
-				} else if (valid && !isDoc)
-					response = new Reply("Invalid User Login.");
-			} else if (request instanceof GrantWriteAccess) {
-				valid = checkHISPUser(request.getUserid(), request
-						.getPassword());
-				if (valid && isDoc) {
-					response = grantWriteAccess((GrantWriteAccess) request);
-					logger.info(request.getUserid() + " GRANT WRITE "
-							+ ((GrantWriteAccess) request).getGranteeId());
-				} else if (valid && !isDoc)
-					response = new Reply("Invalid User Login.");
-			} else if (request instanceof RevokeWriteAccess) {
-				valid = checkHISPUser(request.getUserid(), request
-						.getPassword());
-				if (valid && isDoc) {
-					response = revokeWriteAccess((RevokeWriteAccess) request);
-					logger.info(request.getUserid() + " REVOKE WRITE "
-							+ ((RevokeWriteAccess) request).getGranteeId());
-				} else if (valid && !isDoc)
-					response = new Reply("Invalid User Login.");
-			} else if (request instanceof UpdateRecord) {
-				valid = checkHISPUser(request.getUserid(), request
-						.getPassword());
-				if (valid) {
-					response = updateRecord((UpdateRecord) request);
-					logger.info(request.getUserid() + " UPDATE record "
-							+ ((UpdateRecord) request).getPatientId());
 				}
 			} else if (request instanceof HISPLogin) {
 				valid = checkHISPUser(request.getUserid(), request
@@ -343,405 +274,31 @@ public class AuthServer implements Runnable {
 		return check;
 	}
 
-	/**
-	 * Updates an EHR record
-	 * 
-	 * @param request
-	 * @return - Server's Reply
-	 */
-	private static Reply updateRecord(UpdateRecord request) {
-		Connection connection = null;
-		ResultSet resultSet = null;
-		Statement statement = null;
-		Reply response = new Reply("Error");
-		try {
-			Class.forName("org.sqlite.JDBC");
-			connection = DriverManager.getConnection("jdbc:sqlite:DS.db");
-			statement = connection.createStatement();
-			resultSet = statement
-					.executeQuery("select * from records where userId = '"
-							+ request.getPatientId()
-							+ "' and (owner = '"
-							+ request.getUserid()
-							+ "' or '"
-							+ request.getUserid()
-							+ "' in (select agentId from writeAccess where userId = '"
-							+ request.getPatientId() + "'));");
 
-			PreparedStatement prep = null;
-			if (resultSet.next()) {
-				String oldInfo = new String(Crypto.decrypt(resultSet
-						.getBytes("information"), keyBytes));
-				statement.close();
-				String newInfo = oldInfo + "\n" + request.getAddInfo();
-				prep = connection
-						.prepareStatement("update records set information = ? where userId = ?");
-
-				prep.setBytes(1, Crypto.encrypt(newInfo, keyBytes));
-				prep.setString(2, request.getPatientId());
-				prep.executeUpdate();
-				response = new Reply("Record succesfully updated!");
-			} else
-				response = new Reply("Invalid Request.");
-
-		} catch (Exception e) {
-			e.printStackTrace();
-		} finally {
-			try {
-				statement.close();
-				connection.close();
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-		}
-		return response;
-	}
 
 	/**
-	 * Checks to see if patientId's record was created by agentId
-	 * 
-	 * @param agentId
-	 * @param patientId
-	 * @return true if agent is the owner, false otherwise
-	 */
-	private static boolean isOwner(String agentId, String patientId) {
-		Connection connection = null;
-		ResultSet resultSet = null;
-		Statement statement = null;
-		try {
-			Class.forName("org.sqlite.JDBC");
-			connection = DriverManager.getConnection("jdbc:sqlite:DS.db");
-			statement = connection.createStatement();
-			resultSet = statement
-					.executeQuery("select * from records where userId = '"
-							+ patientId + "' and owner = '" + agentId + "';");
-			if (resultSet.next()) {
-				return true;
-			} else {
-				return false;
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		} finally {
-			try {
-				statement.close();
-				connection.close();
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-		}
-		return false;
-	}
-
-	/**
-	 * Revokes read access from non-owner agents
-	 * 
-	 * @param request
-	 * @return - Server's reply
-	 */
-	private static Reply revokeReadAccess(RevokeReadAccess request) {
-		if (!isOwner(request.getUserid(), request.getPatientId()))
-			return new Reply("Invalid Request");
-		Connection connection = null;
-		ResultSet resultSet = null;
-		Statement statement = null;
-		Reply response = null;
-		try {
-			Class.forName("org.sqlite.JDBC");
-			connection = DriverManager.getConnection("jdbc:sqlite:DS.db");
-			statement = connection.createStatement();
-			resultSet = statement
-					.executeQuery("select * from readAccess where userId = '"
-							+ request.getPatientId() + "' and agentId = '"
-							+ request.getGranteeId() + "';");
-			if (resultSet.next()) {
-				statement.execute("delete from readAccess "
-						+ "where userId = '" + request.getPatientId()
-						+ "' and " + "agentId = '" + request.getGranteeId()
-						+ "';");
-
-				response = new Reply("Read access succesfully revoked!");
-			} else
-				response = new Reply("Already does not have read access");
-
-		} catch (Exception e) {
-			e.printStackTrace();
-		} finally {
-			try {
-				statement.close();
-				connection.close();
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-		}
-		return response;
-	}
-
-	/**
-	 * Grants an agent write access to an EHR
-	 * 
-	 * @param request
-	 * @return - Server's reply
-	 */
-	private static Reply grantWriteAccess(GrantWriteAccess request) {
-		if (!isOwner(request.getUserid(), request.getPatientId()))
-			return new Reply("Invalid Request");
-		Connection connection = null;
-		ResultSet resultSet = null;
-		Statement statement = null;
-		Reply response = null;
-		PreparedStatement prep = null;
-		try {
-			Class.forName("org.sqlite.JDBC");
-			connection = DriverManager.getConnection("jdbc:sqlite:DS.db");
-			statement = connection.createStatement();
-			resultSet = statement
-					.executeQuery("select * from writeAccess where userId = '"
-							+ request.getPatientId() + "' and agentId = '"
-							+ request.getGranteeId() + "';");
-			if (resultSet.next()) {
-				response = new Reply("Already has write access");
-			} else
-				prep = connection
-						.prepareStatement("insert into writeAccess values (?, ?);");
-
-			prep.setString(1, request.getPatientId());
-			prep.setString(2, request.getGranteeId());
-			prep.addBatch();
-			connection.setAutoCommit(false);
-			prep.executeBatch();
-			connection.setAutoCommit(true);
-			response = new Reply("Write access succesfully granted!");
-
-		} catch (Exception e) {
-			e.printStackTrace();
-		} finally {
-			try {
-				statement.close();
-				connection.close();
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-		}
-		return response;
-	}
-
-	/**
-	 * Revokes an agent's write access to an EHR
-	 * 
-	 * @param request
-	 * @return - Server's reply
-	 */
-	private static Reply revokeWriteAccess(RevokeWriteAccess request) {
-		if (!isOwner(request.getUserid(), request.getPatientId()))
-			return new Reply("Invalid Request");
-		Connection connection = null;
-		ResultSet resultSet = null;
-		Statement statement = null;
-		Reply response = null;
-		try {
-			Class.forName("org.sqlite.JDBC");
-			connection = DriverManager.getConnection("jdbc:sqlite:DS.db");
-			statement = connection.createStatement();
-			resultSet = statement
-					.executeQuery("select * from writeAccess where userId = '"
-							+ request.getPatientId() + "' and agentId = '"
-							+ request.getGranteeId() + "';");
-			if (resultSet.next()) {
-				statement.execute("delete from writeAccess "
-						+ "where userId = '" + request.getPatientId()
-						+ "' and " + "agentId = '" + request.getGranteeId()
-						+ "';");
-
-				response = new Reply("Write access succesfully revoked!");
-			} else
-				response = new Reply("Already does not have write access");
-
-		} catch (Exception e) {
-			e.printStackTrace();
-		} finally {
-			try {
-				statement.close();
-				connection.close();
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-		}
-		return response;
-	}
-
-	/**
-	 * Grants an agent read access to an EHR
-	 * 
-	 * @param request
-	 * @return - Server's reply
-	 */
-	private static Reply grantReadAccess(GrantReadAccess request) {
-		if (!isOwner(request.getUserid(), request.getPatientId()))
-			return new Reply("Invalid Request");
-		Connection connection = null;
-		ResultSet resultSet = null;
-		Statement statement = null;
-		Reply response = null;
-		PreparedStatement prep = null;
-		try {
-			Class.forName("org.sqlite.JDBC");
-			connection = DriverManager.getConnection("jdbc:sqlite:DS.db");
-			statement = connection.createStatement();
-			resultSet = statement
-					.executeQuery("select * from readAccess where userId = '"
-							+ request.getPatientId() + "' and agentId = '"
-							+ request.getGranteeId() + "';");
-			if (resultSet.next()) {
-				response = new Reply("Already has read access");
-			} else
-				prep = connection
-						.prepareStatement("insert into readAccess values (?, ?);");
-
-			prep.setString(1, request.getPatientId());
-			prep.setString(2, request.getGranteeId());
-			prep.addBatch();
-			connection.setAutoCommit(false);
-			prep.executeBatch();
-			connection.setAutoCommit(true);
-			response = new Reply("Read access succesfully granted!");
-
-		} catch (Exception e) {
-			e.printStackTrace();
-		} finally {
-			try {
-				statement.close();
-				connection.close();
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-		}
-		return response;
-	}
-
-	/**
-	 * Creates an EHR
-	 * 
-	 * @param request
-	 * @return - Server's Reply
-	 */
-	private static Reply createRecord(CreateRecord request) {
-		Connection connection = null;
-		ResultSet resultSet = null;
-		Statement statement = null;
-		Reply response = null;
-		PreparedStatement prep = null;
-		try {
-			Class.forName("org.sqlite.JDBC");
-			connection = DriverManager.getConnection("jdbc:sqlite:DS.db");
-			statement = connection.createStatement();
-			resultSet = statement
-					.executeQuery("select * from records where userId = '"
-							+ request.getPatientId() + "';");
-			if (resultSet.next()) {
-				response = new Reply(
-						"Record already exists, please restart and simply add data to it");
-			} else {
-				prep = connection
-						.prepareStatement("insert into records values (?, ?, ?, ?);");
-
-				prep.setString(1, request.getPatientId());
-				prep.setLong(2, request.getEncryptionKeyId());
-				prep.setString(3, request.getUserid());
-				prep.setBytes(4, Crypto.encrypt(request.getInformation(), keyBytes));
-				prep.addBatch();
-				connection.setAutoCommit(false);
-				prep.executeBatch();
-				connection.setAutoCommit(true);
-				response = new Reply("Record succesfully added!");
-			}
-
-		} catch (Exception e) {
-			e.printStackTrace();
-		} finally {
-			try {
-				statement.close();
-				connection.close();
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-		}
-		return response;
-	}
-
-//	/**
-//	 * Retrieves an EHR for a patient
-//	 * 
-//	 * @param userId
-//	 *            the requested record's associated userId
-//	 * @return - Server's Reply
-//	 */
-//	private static Reply getRecord(String userId) {
-//		Connection connection = null;
-//		ResultSet resultSet = null;
-//		Statement statement = null;
-//		Reply response = null;
-//		try {
-//			Class.forName("org.sqlite.JDBC");
-//			connection = DriverManager.getConnection("jdbc:sqlite:DS.db");
-//			statement = connection.createStatement();
-//			resultSet = statement
-//					.executeQuery("select * from records where userId = '"
-//							+ userId + "';");
-//			if (resultSet.next()) {
-//				String message = recordToString(resultSet);
-//				response = new Reply(message);
-//			} else
-//				response = new Reply("No such record exists.");
-//
-//		} catch (Exception e) {
-//			e.printStackTrace();
-//		} finally {
-//			try {
-//				statement.close();
-//				connection.close();
-//			} catch (Exception e) {
-//				e.printStackTrace();
-//			}
-//		}
-//		return response;
-//	}
-
-	/**
-	 * Retrieves an EHR for an agent
+	 * Retrieves an EHR 
 	 * 
 	 * @param userId
 	 *            the requested record's associated userId
-	 * @param agent
-	 *            - the requesting agent's Id
 	 * @return - Server's Reply
 	 */
 	private static Reply getRecord(String userId) {
 		try {
-		SSLSocket sslsocket = connectToDS(DSIP);
-		OutputStream sslout = sslsocket.getOutputStream();
-		ObjectOutputStream objOut = new ObjectOutputStream(sslout);
 
-		InputStream sslIn = sslsocket.getInputStream();
-		ObjectInputStream objIn = new ObjectInputStream(sslIn);
-		
-		objOut.writeObject(new ReadRecord(userId));
-		
-		EncryptedEHR ehr = (EncryptedEHR) objIn.readObject();
-		
-		sslsocket = connectToKS(KSIP);
-		sslout = sslsocket.getOutputStream();
-		objOut = new ObjectOutputStream(sslout);
+			DSobjOut.writeObject(new ReadRecord(userId));
 
-		sslIn = sslsocket.getInputStream();
-		objIn = new ObjectInputStream(sslIn);
-		objOut.writeObject("get");
-		objOut.writeObject(ehr.getUserId());
-		
-		byte[] key = (byte[]) objIn.readObject();
-		
-		return decryptEHR(ehr, key);
-		
+			Reply rep = (Reply) DSobjIn.readObject();
+			if (!rep.getMessage().equals("Error Processing Request.")) {
+				EncryptedEHR ehr = (EncryptedEHR) rep;
+				KSobjOut.writeObject("get");
+				KSobjOut.writeObject(ehr.getUserId());
+
+				byte[] key = (byte[]) KSobjIn.readObject();
+
+				return decryptEHR(ehr, key);
+			}
+			return rep;
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -750,6 +307,7 @@ public class AuthServer implements Runnable {
 
 	private static Reply decryptEHR(EncryptedEHR ehr, byte[] key) {
 		try {
+			System.out.println(Crypto.decrypt(ehr.getName(), key));
 		String message = "UserId: " + ehr.getUserId() + "\n";
 		message += "Owner: " + ehr.getOwner() + "\n";
 		message += "Name: " + Crypto.decrypt(ehr.getName(), key)+ "\n";
@@ -758,7 +316,7 @@ public class AuthServer implements Runnable {
 		message += "Diagnosis: " + Crypto.decrypt(ehr.getDiagnosis(), key)+ "\n";
 		message += "Prescriptions: " + Crypto.decrypt(ehr.getPrescriptions(), key)+ "\n";
 		message += "Other: " + Crypto.decrypt(ehr.getOther(), key)+ "\n";
-		
+		return new Reply(message);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -787,10 +345,10 @@ public class AuthServer implements Runnable {
 		boolean check = false;
 		try {
 			Class.forName("org.sqlite.JDBC");
-			connection = DriverManager.getConnection("jdbc:sqlite:PHR.db");
+			connection = DriverManager.getConnection("jdbc:sqlite:user.db");
 			statement = connection.createStatement();
 			resultSet = statement
-					.executeQuery("select password from users where username = '"
+					.executeQuery("select password from phr where username = '"
 							+ username + "';");
 			if (resultSet.next()) {
 				if (resultSet.getString("password").equals(hashtext))
@@ -836,10 +394,10 @@ public class AuthServer implements Runnable {
 		boolean check = false;
 		try {
 			Class.forName("org.sqlite.JDBC");
-			connection = DriverManager.getConnection("jdbc:sqlite:HISP.db");
+			connection = DriverManager.getConnection("jdbc:sqlite:user.db");
 			statement = connection.createStatement();
 			resultSet = statement
-					.executeQuery("select password from users where username = '"
+					.executeQuery("select password from hisp where username = '"
 							+ username + "';");
 			if (resultSet.next()) {
 				if (resultSet.getString("password").equals(hashtext))
@@ -863,5 +421,17 @@ public class AuthServer implements Runnable {
 		return check;
 	}
 
+	private static void logInfo(String entry) {
+		FileHandler fh;
+		try {
+			fh = new FileHandler("AuthServer.log", true);
+			fh.setFormatter(new SimpleFormatter());
+			Logger logger = Logger.getLogger("Auth Server Log");
+			logger.addHandler(fh);
 
+			logger.info(entry);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
 }
