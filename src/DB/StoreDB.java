@@ -15,7 +15,9 @@ import java.sql.Statement;
 import javax.crypto.Cipher;
 import javax.crypto.CipherInputStream;
 import javax.crypto.CipherOutputStream;
+import javax.crypto.KeyGenerator;
 import javax.crypto.NoSuchPaddingException;
+import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 /**
  * Creates a sample Data Store databse with a sample record
@@ -26,33 +28,74 @@ public class StoreDB {
 
     public static void main(String[] args) throws Exception {
         Class.forName("org.sqlite.JDBC");
-        Connection conn = DriverManager.getConnection("jdbc:sqlite:DS.db");
+        Connection conn = DriverManager.getConnection("jdbc:sqlite:ds.db");
         Statement stat = conn.createStatement();
         stat.executeUpdate("drop table if exists records;");
-        stat.executeUpdate("drop table if exists readAccess;");
-        stat.executeUpdate("drop table if exists writeAccess;");
-        stat.executeUpdate("create table records (userId, encryptionKeyId, owner, information);");
-        stat.executeUpdate("create table readAccess (userId, agentId);");
-        stat.executeUpdate("create table writeAccess (userId, agentId);");
-        
+        stat.executeUpdate("create table records (userId, owner, name, age, weight, diagnosis, prescriptions, other);");
+               
+        byte[] key1 = generateAESKey();
+        byte[] key2 = generateAESKey();
+                
         PreparedStatement prep = conn.prepareStatement(
-        "insert into records values (?, ?, ?, ?);");
+        "insert into records values (?, ?, ?, ?, ?, ?, ?, ?);");
 
-	    prep.setString(1, "Patient1");
-	    prep.setLong(2, 1);
-	    prep.setString(3, "Doctor1");
-	    byte[] test = encrypt("Information Goes here!");
-	    String work = decrypt(test);
-	    System.out.println(work);
-	    prep.setBytes(4, test);
+	    prep.setString(1, "1");
+	    prep.setString(2, "Doctor1");
+	    prep.setBytes(3, encrypt("Patient1", key1));
+	    prep.setBytes(4, encrypt("25", key1));
+	    prep.setBytes(5, encrypt("160", key1));
+	    prep.setBytes(6, encrypt("Healthy", key1));
+	    prep.setBytes(7, encrypt("None", key1));
+	    prep.setBytes(8, encrypt("", key1));
+	    prep.addBatch();
+	    
+	    prep.setString(1, "2");
+	    prep.setString(2, "Doctor2");
+	    prep.setBytes(3, encrypt("Patient2", key2));
+	    prep.setBytes(4, encrypt("125", key2));
+	    prep.setBytes(5, encrypt("1160", key2));
+	    prep.setBytes(6, encrypt("Dead", key2));
+	    prep.setBytes(7, encrypt("Everything", key2));
+	    prep.setBytes(8, encrypt("Condolences", key2));
 	    prep.addBatch();
 
 	    conn.setAutoCommit(false);
 	    prep.executeBatch();
 	    conn.setAutoCommit(true);
+	    
+	   
+	    
+	    Class.forName("org.sqlite.JDBC");
+        Connection conn2 = DriverManager.getConnection("jdbc:sqlite:ks.db");
+        Statement stat2 = conn2.createStatement();
+        stat2.executeUpdate("drop table if exists keys;");
+        stat2.executeUpdate("create table keys (userId, key);");
         
-        
-        conn.close();
+        PreparedStatement prep2 = conn2.prepareStatement(
+        "insert into keys values (?, ?);");
+
+	    prep2.setString(1, "1");
+	    prep2.setBytes(2, key1);
+	    prep2.addBatch();
+	    prep2.setString(1, "2");
+	    prep2.setBytes(2, key2);
+	    prep2.addBatch();
+	    
+	    
+	    conn2.setAutoCommit(false);
+	    prep2.executeBatch();
+	    conn2.setAutoCommit(true);
+                
+//		ResultSet rs = stat.executeQuery("select * from records;");
+//		ResultSet rs2 = stat2.executeQuery("select * from keys;");
+//
+//		while (rs.next() && rs2.next()) {
+//			System.out.println(rs.getString("age"));
+//			System.out
+//					.println(decrypt(rs.getBytes("age"), rs2.getBytes("key")));
+//		}
+//	    conn.close();
+//        conn.close();
     }
        
     private static byte[] encrypt(String s, byte[] keyBytes) throws IOException, NoSuchAlgorithmException, NoSuchProviderException, NoSuchPaddingException, InvalidKeyException, InvalidAlgorithmParameterException {
@@ -78,7 +121,8 @@ public class StoreDB {
 		return (cipherText);
 	}
 
-    private static String decrypt(byte[] s, byte[] keyBytes) throws InvalidKeyException, InvalidAlgorithmParameterException, NoSuchAlgorithmException, NoSuchProviderException, NoSuchPaddingException, IOException {
+    @SuppressWarnings("unused")
+	private static String decrypt(byte[] s, byte[] keyBytes) throws InvalidKeyException, InvalidAlgorithmParameterException, NoSuchAlgorithmException, NoSuchProviderException, NoSuchPaddingException, IOException {
     	Cipher cipher = Cipher.getInstance("AES", "BC");
     	// decryption pass
     	SecretKeySpec key = new SecretKeySpec(keyBytes, "AES");
@@ -89,5 +133,13 @@ public class StoreDB {
         cOut.close();
         return new String(bOut.toByteArray());
     }
+    
+	private static byte[] generateAESKey() throws NoSuchAlgorithmException {
+		KeyGenerator kgen = KeyGenerator.getInstance("AES");
+		kgen.init(256); // 192 and 256 bits may not be available
+
+		SecretKey skey = kgen.generateKey();
+		return skey.getEncoded();
+	}
     
   }

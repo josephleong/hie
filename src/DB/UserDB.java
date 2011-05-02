@@ -18,9 +18,14 @@ public class UserDB {
         stat.executeUpdate("drop table if exists phr;");
         stat.executeUpdate("drop table if exists hisp;");
         stat.executeUpdate("drop table if exists ra;");
+        stat.executeUpdate("drop table if exists readAccess;");
+        stat.executeUpdate("drop table if exists writeAccess;");
+        
         stat.executeUpdate("create table phr (username, password);");
         stat.executeUpdate("create table hisp (username, password, type);");
         stat.executeUpdate("create table ra (username, password, columns, conditions);");
+        stat.executeUpdate("create table readAccess (userId, agentId);");
+        stat.executeUpdate("create table writeAccess (userId, agentId);");
         
     	MessageDigest m = MessageDigest.getInstance("MD5");
     	m.reset();
