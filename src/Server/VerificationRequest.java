@@ -2,6 +2,7 @@ package Server;
 
 import java.io.Serializable;
 
+@SuppressWarnings("serial")
 public class VerificationRequest implements Serializable {
 
 	private byte[] encryptedMessage;

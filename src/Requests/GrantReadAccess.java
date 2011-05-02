@@ -9,7 +9,6 @@ public class GrantReadAccess extends Request {
 	private String patientId;
 	
 	public GrantReadAccess(String userid, String password, String granteeId, String patientId) {
-		super(userid, password);
 		this.setGranteeId(granteeId);
 		this.setPatientId(patientId);
 	}

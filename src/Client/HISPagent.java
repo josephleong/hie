@@ -28,6 +28,7 @@ import Server.Reply;
  *
  */
 public class HISPagent {
+	private static final String ip = "localhost";
 	public static void main(String[] args) {
 		try {
 			            
@@ -35,8 +36,8 @@ public class HISPagent {
             InputStreamReader inputstreamreader = new InputStreamReader(inputstream);
             BufferedReader bufferedreader = new BufferedReader(inputstreamreader);
             
-            System.out.println("Please enter the IP of the server to connect to.");
-            String ip = bufferedreader.readLine();
+//            System.out.println("Please enter the IP of the server to connect to.");
+//            String ip = bufferedreader.readLine();
             SSLSocket sslsocket = handshake(ip);
             
             OutputStream sslOut = sslsocket.getOutputStream();
@@ -104,10 +105,27 @@ public class HISPagent {
 		if(command.equals("view") || command.equals("1")) {
 			System.out.println("What is the patients userId?");
 			String patientId = bufferedreader.readLine();
-			request = new ReadRecord(username, password, patientId);
+			request = new ReadRecord(patientId, "hisp");
 		}
-		else if(command.equals("create") || command.equals("2"))
-			request = new CreateRecord(username, password);
+		else if(command.equals("create") || command.equals("2")) {
+			System.out.println("What is the patients's userId?");
+			String userId = bufferedreader.readLine();
+			String owner = username;
+			System.out.println("What is the patients's name?");
+			String name = bufferedreader.readLine();
+			System.out.println("What is the patients's age?");
+			String age = bufferedreader.readLine();
+			System.out.println("What is the patients's weight?");
+			String weight = bufferedreader.readLine();
+			System.out.println("What is the patients's diagnosis?");
+			String diagnosis = bufferedreader.readLine();
+			System.out.println("What are the patients's prescriptions?");
+			String prescriptions = bufferedreader.readLine();
+			System.out.println("Input any other information.");
+			String other = bufferedreader.readLine();
+			
+			request = new CreateRecord(userId, owner, name, age, weight, diagnosis, prescriptions, other);
+		}
 		else if(command.equals("grant read") || command.equals("3")) {
 			System.out.println("What is the agent's userId?");
 			String agentId = bufferedreader.readLine();
@@ -137,11 +155,23 @@ public class HISPagent {
 			request = new RevokeWriteAccess(username, password, agentId, patientId);
 		}
 		else if(command.equals("add") || command.equals("7")) {
-			System.out.println("What is the patients userId?");
-			String patientId = bufferedreader.readLine();
-			System.out.println("What would you like to add?");
-			String info = bufferedreader.readLine();
-			request = new UpdateRecord(username, password, patientId, info);
+			System.out.println("What is the patients's userId?");
+			String userId = bufferedreader.readLine();
+			String owner = username;
+			System.out.println("What is the patients's name?");
+			String name = bufferedreader.readLine();
+			System.out.println("What is the patients's age?");
+			String age = bufferedreader.readLine();
+			System.out.println("What is the patients's weight?");
+			String weight = bufferedreader.readLine();
+			System.out.println("What is the patients's diagnosis?");
+			String diagnosis = bufferedreader.readLine();
+			System.out.println("What are the patients's prescriptions?");
+			String prescriptions = bufferedreader.readLine();
+			System.out.println("Input any other information.");
+			String other = bufferedreader.readLine();
+			
+			request = new UpdateRecord(userId, owner, name, age, weight, diagnosis, prescriptions, other);
 		}
 		else if(command.equals("quit") || command.equals("8")) {
 			System.out.println("Goodbye.");

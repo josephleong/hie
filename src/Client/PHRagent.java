@@ -55,7 +55,7 @@ public class PHRagent {
 				System.out.println();
 			} while (response.equals(new Reply("Invalid User Login")));
                        
-            ReadRecord request= new ReadRecord(username, password);	
+            ReadRecord request= new ReadRecord(username, "phr");	
             objOut.writeObject(request);
             response = (Reply)objIn.readObject();
         	System.out.println(response.getMessage());

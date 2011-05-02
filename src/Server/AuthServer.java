@@ -36,13 +36,14 @@ public class AuthServer implements Runnable {
 	private static ObjectInputStream DSobjIn = null;
 	private static ObjectOutputStream KSobjOut = null;
 	private static ObjectInputStream KSobjIn = null;
+	private static String userId = null;
 
 	private AuthServer(SSLSocket sock) {
 		sslsocket = sock;
 	}
 
 	public static void main(String[] args) throws IOException, ClassNotFoundException {
-		System.out.println("Server Started.");
+		System.out.println("Authentication Server Started.");
 		SSLServerSocket sslserversocket = handshake();
 		while (true) {
 			SSLSocket socket = (SSLSocket) sslserversocket.accept();
@@ -163,36 +164,34 @@ public class AuthServer implements Runnable {
 		Reply response = new Reply("Error Processing Request.");
 		try {
 			boolean valid = false;
-			//boolean isDoc = userIsADoctor(request.getUserid());
+
 			if (request instanceof ReadRecord) {
-				request = (ReadRecord) request;
-				if (((ReadRecord) request).getRecordId() == null) {
-					valid = checkPHRUser(request.getUserid(), request.getPassword());
-					if (valid) {
-						response = getRecord(request.getUserid());
-						logInfo(request.getUserid() + " READ record "+ ((ReadRecord) request).getUserid());
-					}
-				} else {
-					valid = checkHISPUser(request.getUserid(), request.getPassword());
-					valid = valid && hasReadAccess(request.getUserid(), ((ReadRecord) request).getRecordId());
-					if (valid) {
-						response = getRecord(((ReadRecord) request).getRecordId());
-						logInfo(request.getUserid() + " READ record "
-								+ ((ReadRecord) request).getRecordId());
-					}
+				if(((ReadRecord) request).getType().equals("phr") && ((ReadRecord) request).getRecordId().equals(userId)) {
+					response = getRecord((ReadRecord) request);
+					logInfo("PHR READ record "+ ((ReadRecord) request).getRecordId());
+				} else if(((ReadRecord) request).getType().equals("hisp") && hasReadAccess(((ReadRecord) request).getRecordId())) {
+					response = getRecord((ReadRecord) request);
+					logInfo("HISP "+((ReadRecord) request).getAgentId() + " READ record "+ ((ReadRecord) request).getRecordId());
+				} else if(((ReadRecord) request).getType().equals("ra")) {
+					response = getRecord((ReadRecord) request);
+					logInfo("RA "+((ReadRecord) request).getAgentId() + " READ record "+ ((ReadRecord) request).getRecordId());
 				}
+				
 			} else if (request instanceof HISPLogin) {
-				valid = checkHISPUser(request.getUserid(), request
+				valid = checkHISPUser(((HISPLogin) request).getUserid(), ((HISPLogin) request)
 						.getPassword());
-				if (valid)
+				if (valid) {
+					userId = ((HISPLogin) request).getUserid();
 					response = new Reply("Welcome!");
+				} else response = new Reply("Invalid User Login");
 			} else if (request instanceof PHRLogin) {
-				valid = checkPHRUser(request.getUserid(), request.getPassword());
-				if (valid)
+				valid = checkPHRUser(((PHRLogin) request).getUserid(), ((PHRLogin) request).getPassword());
+				
+				if (valid) {
+					userId = ((PHRLogin) request).getUserid();
 					response = new Reply("Welcome!");
+				} else response = new Reply("Invalid User Login");
 			}
-			if (!valid)
-				response = new Reply("Invalid User Login");
 
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -201,7 +200,7 @@ public class AuthServer implements Runnable {
 		return response;
 	}
 
-	private static boolean hasReadAccess(String userid, String recordId) {
+	private static boolean hasReadAccess(String recordId) {
 		Connection connection = null;
 		ResultSet resultSet = null;
 		Statement statement = null;
@@ -215,7 +214,7 @@ public class AuthServer implements Runnable {
 							+ recordId + "';");
 
 			while (resultSet.next()) {
-				if (resultSet.getString("agentId").equals(userid))
+				if (resultSet.getString("agentId").equals(userId))
 					check = true;
 			}
 
@@ -239,7 +238,8 @@ public class AuthServer implements Runnable {
 	 * @param userId
 	 * @return - true if userId corresponds to a doctor, false otherwise
 	 */
-	private static boolean userIsADoctor(String userId) {
+	@SuppressWarnings("unused")
+	private static boolean isADoctor() {
 		Connection connection = null;
 		ResultSet resultSet = null;
 		Statement statement = null;
@@ -283,10 +283,10 @@ public class AuthServer implements Runnable {
 	 *            the requested record's associated userId
 	 * @return - Server's Reply
 	 */
-	private static Reply getRecord(String userId) {
+	private static Reply getRecord(ReadRecord rr) {
 		try {
 
-			DSobjOut.writeObject(new ReadRecord(userId));
+			DSobjOut.writeObject(rr);
 
 			Reply rep = (Reply) DSobjIn.readObject();
 			if (!rep.getMessage().equals("Error Processing Request.")) {
@@ -307,16 +307,17 @@ public class AuthServer implements Runnable {
 
 	private static Reply decryptEHR(EncryptedEHR ehr, byte[] key) {
 		try {
-			System.out.println(Crypto.decrypt(ehr.getName(), key));
-		String message = "UserId: " + ehr.getUserId() + "\n";
-		message += "Owner: " + ehr.getOwner() + "\n";
-		message += "Name: " + Crypto.decrypt(ehr.getName(), key)+ "\n";
-		message += "Age: " + Crypto.decrypt(ehr.getAge(), key)+ "\n";
-		message += "Weight: " + Crypto.decrypt(ehr.getWeight(), key)+ "\n";
-		message += "Diagnosis: " + Crypto.decrypt(ehr.getDiagnosis(), key)+ "\n";
-		message += "Prescriptions: " + Crypto.decrypt(ehr.getPrescriptions(), key)+ "\n";
-		message += "Other: " + Crypto.decrypt(ehr.getOther(), key)+ "\n";
-		return new Reply(message);
+			String message = "UserId: " + ehr.getUserId() + "\n";
+			message += "Owner: " + ehr.getOwner() + "\n";
+			message += "Name: " + Crypto.decrypt(ehr.getName(), key) + "\n";
+			message += "Age: " + Crypto.decrypt(ehr.getAge(), key) + "\n";
+			message += "Weight: " + Crypto.decrypt(ehr.getWeight(), key) + "\n";
+			message += "Diagnosis: " + Crypto.decrypt(ehr.getDiagnosis(), key)
+					+ "\n";
+			message += "Prescriptions: "
+					+ Crypto.decrypt(ehr.getPrescriptions(), key) + "\n";
+			message += "Other: " + Crypto.decrypt(ehr.getOther(), key) + "\n";
+			return new Reply(message);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

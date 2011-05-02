@@ -14,6 +14,9 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Statement;
+import java.util.logging.FileHandler;
+import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
 
 import javax.crypto.NoSuchPaddingException;
 import javax.net.ssl.SSLServerSocket;
@@ -62,13 +65,15 @@ public class KeyStore implements Runnable {
 			if (request.equals("get")) {
 				String userIdOfRequest = (String) objIn.readObject();
 				byte[] key = getKey(userIdOfRequest);
-				System.out.println(key);
+System.out.println(key);
+				logInfo("Retrieving userId "+userIdOfRequest+"'s key.");
 				objOut.writeObject(key);
 
 			} else if (request.equals("add")) {
 				String userId = (String) objIn.readObject();
 				byte[] key = (byte[]) objIn.readObject();
 				addKey(userId, key);
+				logInfo("Adding userId "+userId+"'s key to KS.");
 			}
 
 		} catch (EOFException exception) {
@@ -160,6 +165,20 @@ public class KeyStore implements Runnable {
 		} catch (Exception exception) {
 			exception.printStackTrace();
 			return null;
+		}
+	}
+	
+	private static void logInfo(String entry) {
+		FileHandler fh;
+		try {
+			fh = new FileHandler("KS.log", true);
+			fh.setFormatter(new SimpleFormatter());
+			Logger logger = Logger.getLogger("KS Log");
+			logger.addHandler(fh);
+
+			logger.info(entry);
+		} catch (Exception e) {
+			e.printStackTrace();
 		}
 	}
 	

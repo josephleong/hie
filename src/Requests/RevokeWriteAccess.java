@@ -12,7 +12,6 @@ public class RevokeWriteAccess extends Request {
 	private String patientId;
 	
 	public RevokeWriteAccess(String userid, String password, String granteeId, String patientId) {
-		super(userid, password);
 		this.setGranteeId(granteeId);
 		this.setPatientId(patientId);
 	}
@@ -32,4 +31,5 @@ public class RevokeWriteAccess extends Request {
 	public String getPatientId() {
 		return patientId;
 	}
+
 }

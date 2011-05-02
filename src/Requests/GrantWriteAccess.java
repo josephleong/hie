@@ -10,7 +10,6 @@ public class GrantWriteAccess extends Request {
 	private String patientId;
 	
 	public GrantWriteAccess(String userid, String password, String granteeId, String patientId) {
-		super(userid, password);
 		this.setGranteeId(granteeId);
 		this.setPatientId(patientId);
 	}

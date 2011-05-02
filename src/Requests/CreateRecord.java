@@ -1,9 +1,5 @@
 package Requests;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 /**
  * The request to Create a record for a HISP agent
  * @author Joseph Leong (leong1), Brett Stevens (steven10)
@@ -11,45 +7,114 @@ import java.io.InputStreamReader;
  */
 @SuppressWarnings("serial")
 public class CreateRecord extends Request {
-	private String patientId;
-	private long encryptionKeyId = 0;
-	private String information;
-
-	public CreateRecord(String userid, String password) throws IOException {
-		super(userid, password);
-		InputStream inputstream = System.in;
-		InputStreamReader inputstreamreader = new InputStreamReader(inputstream);
-		BufferedReader bufferedreader = new BufferedReader(inputstreamreader);
-		System.out.println("What is the patients userId?");
-		this.setPatientId(bufferedreader.readLine());
-//		System.out.println("Generate encryption keyID! for now... input it");
-//		this.setEncryptionKeyId(Long.parseLong(bufferedreader.readLine()));
-		System.out.println("Input the health record information!");
-		this.setInformation(bufferedreader.readLine());
+	private String userId;
+	private String owner;
+	private String name;
+	private String age;
+	private String weight;
+	private String prescriptions;
+	private String other;
+	private String diagnosis;
+	private byte[] key;
+	
+	public CreateRecord(String userId, String owner, String name, String age,
+			String weight, String prescriptions, String other,
+			String diagnosis, byte[] key) {
+		super();
+		this.userId = userId;
+		this.owner = owner;
+		this.name = name;
+		this.age = age;
+		this.weight = weight;
+		this.prescriptions = prescriptions;
+		this.other = other;
+		this.diagnosis = diagnosis;
+		this.key = key;
 	}
 
-	public void setEncryptionKeyId(long encryptionKeyId) {
-		this.encryptionKeyId = encryptionKeyId;
+	public CreateRecord(String userId, String owner, String name, String age,
+			String weight, String prescriptions, String other, String diagnosis) {
+		super();
+		this.userId = userId;
+		this.owner = owner;
+		this.name = name;
+		this.age = age;
+		this.weight = weight;
+		this.prescriptions = prescriptions;
+		this.other = other;
+		this.diagnosis = diagnosis;
 	}
 
-	public long getEncryptionKeyId() {
-		return encryptionKeyId;
+	public String getUserId() {
+		return userId;
 	}
 
-	public void setInformation(String information) {
-		this.information = information;
+	public void setUserId(String userId) {
+		this.userId = userId;
 	}
 
-	public String getInformation() {
-		return information;
+	public String getOwner() {
+		return owner;
 	}
 
-	public void setPatientId(String patientId) {
-		this.patientId = patientId;
+	public void setOwner(String owner) {
+		this.owner = owner;
 	}
 
-	public String getPatientId() {
-		return patientId;
+	public String getName() {
+		return name;
 	}
 
+	public void setName(String name) {
+		this.name = name;
+	}
+
+	public String getAge() {
+		return age;
+	}
+
+	public void setAge(String age) {
+		this.age = age;
+	}
+
+	public String getWeight() {
+		return weight;
+	}
+
+	public void setWeight(String weight) {
+		this.weight = weight;
+	}
+
+	public String getPrescriptions() {
+		return prescriptions;
+	}
+
+	public void setPrescriptions(String prescriptions) {
+		this.prescriptions = prescriptions;
+	}
+
+	public String getOther() {
+		return other;
+	}
+
+	public void setOther(String other) {
+		this.other = other;
+	}
+
+	public String getDiagnosis() {
+		return diagnosis;
+	}
+
+	public void setDiagnosis(String diagnosis) {
+		this.diagnosis = diagnosis;
+	}
+
+	public byte[] getKey() {
+		return key;
+	}
+
+	public void setKey(byte[] key) {
+		this.key = key;
+	}
+	
 }
