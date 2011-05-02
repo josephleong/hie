@@ -24,8 +24,11 @@ import javax.net.ssl.SSLServerSocket;
 import javax.net.ssl.SSLServerSocketFactory;
 import javax.net.ssl.SSLSocket;
 
+import Requests.EncryptedEHR;
 import Requests.ReadRecord;
+import Requests.Reply;
 import Requests.Request;
+import Requests.VerificationRequest;
 
 /**
  * DataServer, handles PHR and HISP requests and authenticates then serves data

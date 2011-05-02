@@ -1,4 +1,4 @@
-package Server;
+package Requests;
 import java.io.Serializable;
 
 /**

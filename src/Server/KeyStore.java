@@ -23,6 +23,8 @@ import javax.net.ssl.SSLServerSocket;
 import javax.net.ssl.SSLServerSocketFactory;
 import javax.net.ssl.SSLSocket;
 
+import Requests.VerificationRequest;
+
 /**
  * DataServer, handles PHR and HISP requests and authenticates
  * then serves data from Data Store

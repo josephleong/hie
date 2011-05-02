@@ -22,10 +22,13 @@ import javax.net.ssl.SSLServerSocketFactory;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 
+import Requests.EncryptedEHR;
 import Requests.HISPLogin;
 import Requests.PHRLogin;
 import Requests.ReadRecord;
+import Requests.Reply;
 import Requests.Request;
+import Requests.VerificationRequest;
 
 public class AuthServer implements Runnable {
 	private static final String DSIP = "localhost";

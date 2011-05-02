@@ -10,7 +10,7 @@ import java.io.OutputStream;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 
-import Requests.PHRLogin;
+import Requests.RALogin;
 import Requests.ReadRecord;
 import Requests.Reply;
 
@@ -20,7 +20,7 @@ import Requests.Reply;
  * @author Joseph Leong (leong1), Brett Stevens (steven10)
  *
  */
-public class PHRagent {
+public class RAagent {
 	private static final String ip = "localhost"; // IP of AuthServer
 	
 	public static void main(String[] args) {
@@ -49,13 +49,13 @@ public class PHRagent {
 				username = bufferedreader.readLine();
 				System.out.println("Password?");
 				password = bufferedreader.readLine();
-				objOut.writeObject(new PHRLogin(username, password));
+				objOut.writeObject(new RALogin(username, password));
 				response = (Reply) objIn.readObject();
 				System.out.println(response.getMessage());
 				System.out.println();
 			} while (response.equals(new Reply("Invalid User Login")));
                        
-            ReadRecord request= new ReadRecord(username, "phr");	
+            ReadRecord request= new ReadRecord(username, "ra");	
             objOut.writeObject(request);
             response = (Reply)objIn.readObject();
         	System.out.println(response.getMessage());

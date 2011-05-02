@@ -1,9 +1,8 @@
-package Server;
+package Requests;
 
-import java.io.Serializable;
 
 @SuppressWarnings("serial")
-public class VerificationRequest implements Serializable {
+public class VerificationRequest extends Request {
 
 	private byte[] encryptedMessage;
 

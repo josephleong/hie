@@ -15,11 +15,11 @@ import Requests.GrantReadAccess;
 import Requests.GrantWriteAccess;
 import Requests.HISPLogin;
 import Requests.ReadRecord;
+import Requests.Reply;
 import Requests.Request;
 import Requests.RevokeReadAccess;
 import Requests.RevokeWriteAccess;
 import Requests.UpdateRecord;
-import Server.Reply;
 
 /**
  * HISP client Agent, Handles all the operations a Hisp agent could make

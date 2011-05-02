@@ -1,4 +1,4 @@
-package Server;
+package Requests;
 
 @SuppressWarnings("serial")
 public class EncryptedEHR extends Reply{
