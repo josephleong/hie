@@ -1,10 +1,10 @@
 KeyStore
-	key.db
+	ks.db
 		keys
 			userId		key
 
 DataStore
-	ehr.db
+	ds.db
 		records
 			userId		owner		|		name		age		weight		diagnosis		prescriptions		other
 
@@ -16,3 +16,7 @@ AuthServer
 			username		password		type
 		ra
 			username		password		columns		conditions
+		readAccess
+			userId		agentId
+		writeAccess
+			userId		agentId

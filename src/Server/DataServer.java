@@ -778,7 +778,7 @@ public class DataServer implements Runnable {
 				(SSLServerSocketFactory) SSLServerSocketFactory.getDefault();
 			
 			SSLServerSocket sslserversocket = 
-				(SSLServerSocket) sslserversocketfactory.createServerSocket(9996);
+				(SSLServerSocket) sslserversocketfactory.createServerSocket(9997);
 			
 			String[] enabledCipherSuites = { "SSL_DH_anon_WITH_RC4_128_MD5" };
 			sslserversocket.setEnabledCipherSuites(enabledCipherSuites);

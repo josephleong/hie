@@ -66,10 +66,8 @@ public class AuthServer implements Runnable {
 	private AuthServer(SSLSocket sock) {
 		sslsocket = sock;
 	}
-	public static void main(String[] args) throws InvalidKeyException,
-			NoSuchAlgorithmException, NoSuchProviderException,
-			NoSuchPaddingException, InvalidAlgorithmParameterException,
-			IOException {
+
+	public static void main(String[] args) throws IOException {
 		System.out.println("Server Started.");
 		SSLServerSocket sslserversocket = handshake();
 		while (true) {
@@ -100,8 +98,6 @@ public class AuthServer implements Runnable {
 			exception.printStackTrace();
 		}
 	}
-
-	
 
 	private static byte[] rsaDecrypt(byte[] data) {
 		try {
@@ -906,6 +902,35 @@ public class AuthServer implements Runnable {
 
 	}
 
+	private static byte[] encrypt(String s, byte[] keyBytes)
+			throws IOException, NoSuchAlgorithmException,
+			NoSuchProviderException, NoSuchPaddingException,
+			InvalidKeyException, InvalidAlgorithmParameterException {
+		Security
+				.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
+		byte[] input = s.getBytes();
+
+		SecretKeySpec key = new SecretKeySpec(keyBytes, "AES");
+		// IvParameterSpec ivSpec = new IvParameterSpec(ivBytes);
+		Cipher cipher = Cipher.getInstance("AES", "BC");
+
+		// encryption pass
+		cipher.init(Cipher.ENCRYPT_MODE, key);
+		ByteArrayInputStream bIn = new ByteArrayInputStream(input);
+		CipherInputStream cIn = new CipherInputStream(bIn, cipher);
+		ByteArrayOutputStream bOut = new ByteArrayOutputStream();
+
+		int ch;
+		while ((ch = cIn.read()) >= 0) {
+			bOut.write(ch);
+		}
+
+		byte[] cipherText = bOut.toByteArray();
+
+		return (cipherText);
+
+	}
+
 	/**
 	 * Decrypts a String via AES
 	 * 
@@ -916,6 +941,22 @@ public class AuthServer implements Runnable {
 	private static String decrypt(byte[] s) throws InvalidKeyException,
 			InvalidAlgorithmParameterException, NoSuchAlgorithmException,
 			NoSuchProviderException, NoSuchPaddingException, IOException {
+		Cipher cipher = Cipher.getInstance("AES");
+		// decryption pass
+		SecretKeySpec key = new SecretKeySpec(keyBytes, "AES");
+		// IvParameterSpec ivSpec = new IvParameterSpec(ivBytes);
+		cipher.init(Cipher.DECRYPT_MODE, key);
+		ByteArrayOutputStream bOut = new ByteArrayOutputStream();
+		CipherOutputStream cOut = new CipherOutputStream(bOut, cipher);
+		cOut.write(s);
+		cOut.close();
+		return new String(bOut.toByteArray());
+	}
+
+	private static String decrypt(byte[] s, byte[] keyBytes)
+			throws InvalidKeyException, InvalidAlgorithmParameterException,
+			NoSuchAlgorithmException, NoSuchProviderException,
+			NoSuchPaddingException, IOException {
 		Cipher cipher = Cipher.getInstance("AES");
 		// decryption pass
 		SecretKeySpec key = new SecretKeySpec(keyBytes, "AES");
