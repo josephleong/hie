@@ -1,7 +1,5 @@
 package Server;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -9,27 +7,17 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.math.BigInteger;
-import java.security.InvalidAlgorithmParameterException;
-import java.security.InvalidKeyException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
-import java.security.Security;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.logging.FileHandler;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
 
-import javax.crypto.Cipher;
-import javax.crypto.CipherInputStream;
-import javax.crypto.CipherOutputStream;
-import javax.crypto.NoSuchPaddingException;
-import javax.crypto.spec.SecretKeySpec;
 import javax.net.ssl.SSLServerSocket;
 import javax.net.ssl.SSLServerSocketFactory;
 import javax.net.ssl.SSLSocket;
@@ -47,6 +35,9 @@ import Requests.RevokeWriteAccess;
 import Requests.UpdateRecord;
 
 public class AuthServer implements Runnable {
+	private static final String DSIP = "localhost";
+	private static final String KSIP = "localhost";
+	
 	private static SSLSocket sslsocket;
 	// AES Key
 	private static byte[] keyBytes = new byte[] { 0x00, 0x01, 0x02, 0x03, 0x04,
@@ -172,7 +163,7 @@ public class AuthServer implements Runnable {
 	}
 
 	/**
-	 * Handles the client requests Logs actions to DS.log for auditing
+	 * Handles the client requests Logs actions to AuthServer.log for auditing
 	 * 
 	 * @param request
 	 *            - client request
@@ -182,9 +173,9 @@ public class AuthServer implements Runnable {
 			throws NoSuchAlgorithmException {
 		Reply response = new Reply("Error Processing Request.");
 		try {
-			FileHandler fh = new FileHandler("DS.log", true);
+			FileHandler fh = new FileHandler("AuthServer.log", true);
 			fh.setFormatter(new SimpleFormatter());
-			Logger logger = Logger.getLogger("DS Log");
+			Logger logger = Logger.getLogger("AuthServer Log");
 			logger.addHandler(fh);
 
 			boolean valid = false;
@@ -192,19 +183,16 @@ public class AuthServer implements Runnable {
 			if (request instanceof ReadRecord) {
 				request = (ReadRecord) request;
 				if (((ReadRecord) request).getRecordId() == null) {
-					valid = checkPHRUser(request.getUserid(), request
-							.getPassword());
+					valid = checkPHRUser(request.getUserid(), request.getPassword());
 					if (valid) {
 						response = getRecord(request.getUserid());
-						logger.info(request.getUserid() + " READ record "
-								+ ((ReadRecord) request).getRecordId());
+						logger.info(request.getUserid() + " READ record "+ ((ReadRecord) request).getRecordId());
 					}
 				} else {
-					valid = checkHISPUser(request.getUserid(), request
-							.getPassword());
+					valid = checkHISPUser(request.getUserid(), request.getPassword());
+					valid = valid && hasReadAccess(request.getUserid(), ((ReadRecord) request).getRecordId());
 					if (valid) {
-						response = getRecord(((ReadRecord) request)
-								.getRecordId(), request.getUserid());
+						response = getRecord(((ReadRecord) request).getRecordId());
 						logger.info(request.getUserid() + " READ record "
 								+ ((ReadRecord) request).getRecordId());
 					}
@@ -282,6 +270,38 @@ public class AuthServer implements Runnable {
 		return response;
 	}
 
+	private static boolean hasReadAccess(String userid, String recordId) {
+		Connection connection = null;
+		ResultSet resultSet = null;
+		Statement statement = null;
+		boolean check = false;
+		try {
+			Class.forName("org.sqlite.JDBC");
+			connection = DriverManager.getConnection("jdbc:sqlite:user.db");
+			statement = connection.createStatement();
+			resultSet = statement
+					.executeQuery("select agentId from readAccess where userId = '"
+							+ recordId + "';");
+
+			while (resultSet.next()) {
+				if (resultSet.getString("agentId").equals(userid))
+					check = true;
+			}
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			try {
+				statement.close();
+				connection.close();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+		return check;
+
+	}
+
 	/**
 	 * Checks to see if a user is a Doctor
 	 * 
@@ -295,10 +315,10 @@ public class AuthServer implements Runnable {
 		boolean check = false;
 		try {
 			Class.forName("org.sqlite.JDBC");
-			connection = DriverManager.getConnection("jdbc:sqlite:HISP.db");
+			connection = DriverManager.getConnection("jdbc:sqlite:user.db");
 			statement = connection.createStatement();
 			resultSet = statement
-					.executeQuery("select type from users where username = '"
+					.executeQuery("select type from hisp where username = '"
 							+ userId + "';");
 			if (resultSet.next()) {
 				if (resultSet.getString("type").equals("doctor"))
@@ -350,14 +370,14 @@ public class AuthServer implements Runnable {
 
 			PreparedStatement prep = null;
 			if (resultSet.next()) {
-				String oldInfo = new String(decrypt(resultSet
-						.getBytes("information")));
+				String oldInfo = new String(Crypto.decrypt(resultSet
+						.getBytes("information"), keyBytes));
 				statement.close();
 				String newInfo = oldInfo + "\n" + request.getAddInfo();
 				prep = connection
 						.prepareStatement("update records set information = ? where userId = ?");
 
-				prep.setBytes(1, encrypt(newInfo));
+				prep.setBytes(1, Crypto.encrypt(newInfo, keyBytes));
 				prep.setString(2, request.getPatientId());
 				prep.executeUpdate();
 				response = new Reply("Record succesfully updated!");
@@ -628,7 +648,7 @@ public class AuthServer implements Runnable {
 				prep.setString(1, request.getPatientId());
 				prep.setLong(2, request.getEncryptionKeyId());
 				prep.setString(3, request.getUserid());
-				prep.setBytes(4, encrypt(request.getInformation()));
+				prep.setBytes(4, Crypto.encrypt(request.getInformation(), keyBytes));
 				prep.addBatch();
 				connection.setAutoCommit(false);
 				prep.executeBatch();
@@ -649,43 +669,43 @@ public class AuthServer implements Runnable {
 		return response;
 	}
 
-	/**
-	 * Retrieves an EHR for a patient
-	 * 
-	 * @param userId
-	 *            the requested record's associated userId
-	 * @return - Server's Reply
-	 */
-	private static Reply getRecord(String userId) {
-		Connection connection = null;
-		ResultSet resultSet = null;
-		Statement statement = null;
-		Reply response = null;
-		try {
-			Class.forName("org.sqlite.JDBC");
-			connection = DriverManager.getConnection("jdbc:sqlite:DS.db");
-			statement = connection.createStatement();
-			resultSet = statement
-					.executeQuery("select * from records where userId = '"
-							+ userId + "';");
-			if (resultSet.next()) {
-				String message = recordToString(resultSet);
-				response = new Reply(message);
-			} else
-				response = new Reply("No such record exists.");
-
-		} catch (Exception e) {
-			e.printStackTrace();
-		} finally {
-			try {
-				statement.close();
-				connection.close();
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-		}
-		return response;
-	}
+//	/**
+//	 * Retrieves an EHR for a patient
+//	 * 
+//	 * @param userId
+//	 *            the requested record's associated userId
+//	 * @return - Server's Reply
+//	 */
+//	private static Reply getRecord(String userId) {
+//		Connection connection = null;
+//		ResultSet resultSet = null;
+//		Statement statement = null;
+//		Reply response = null;
+//		try {
+//			Class.forName("org.sqlite.JDBC");
+//			connection = DriverManager.getConnection("jdbc:sqlite:DS.db");
+//			statement = connection.createStatement();
+//			resultSet = statement
+//					.executeQuery("select * from records where userId = '"
+//							+ userId + "';");
+//			if (resultSet.next()) {
+//				String message = recordToString(resultSet);
+//				response = new Reply(message);
+//			} else
+//				response = new Reply("No such record exists.");
+//
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		} finally {
+//			try {
+//				statement.close();
+//				connection.close();
+//			} catch (Exception e) {
+//				e.printStackTrace();
+//			}
+//		}
+//		return response;
+//	}
 
 	/**
 	 * Retrieves an EHR for an agent
@@ -696,61 +716,53 @@ public class AuthServer implements Runnable {
 	 *            - the requesting agent's Id
 	 * @return - Server's Reply
 	 */
-	private static Reply getRecord(String userId, String agent) {
-		Connection connection = null;
-		ResultSet resultSet = null;
-		Statement statement = null;
-		Reply response = null;
+	private static Reply getRecord(String userId) {
 		try {
-			Class.forName("org.sqlite.JDBC");
-			connection = DriverManager.getConnection("jdbc:sqlite:DS.db");
-			statement = connection.createStatement();
-			resultSet = statement
-					.executeQuery("select * from records where userId = '"
-							+ userId
-							+ "' and (owner = '"
-							+ agent
-							+ "' or '"
-							+ agent
-							+ "' in (select agentId from readAccess where userId = '"
-							+ userId + "'));");
-			if (resultSet.next()) {
-				String message = recordToString(resultSet);
-				response = new Reply(message);
-			} else
-				response = new Reply("Invalid Request.");
+		SSLSocket sslsocket = connectToDS(DSIP);
+		OutputStream sslout = sslsocket.getOutputStream();
+		ObjectOutputStream objOut = new ObjectOutputStream(sslout);
 
+		InputStream sslIn = sslsocket.getInputStream();
+		ObjectInputStream objIn = new ObjectInputStream(sslIn);
+		
+		objOut.writeObject(new ReadRecord(userId));
+		
+		EncryptedEHR ehr = (EncryptedEHR) objIn.readObject();
+		
+		sslsocket = connectToKS(KSIP);
+		sslout = sslsocket.getOutputStream();
+		objOut = new ObjectOutputStream(sslout);
+
+		sslIn = sslsocket.getInputStream();
+		objIn = new ObjectInputStream(sslIn);
+		objOut.writeObject("get");
+		objOut.writeObject(ehr.getUserId());
+		
+		byte[] key = (byte[]) objIn.readObject();
+		
+		return decryptEHR(ehr, key);
+		
 		} catch (Exception e) {
 			e.printStackTrace();
-		} finally {
-			try {
-				statement.close();
-				connection.close();
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
 		}
-		return response;
+		return null;
 	}
 
-	/**
-	 * Formats a request into a human-readable string
-	 * 
-	 * @param resultSet
-	 *            - query resultSet
-	 * @return a string result
-	 */
-	private static String recordToString(ResultSet resultSet)
-			throws SQLException, InvalidKeyException,
-			InvalidAlgorithmParameterException, NoSuchAlgorithmException,
-			NoSuchProviderException, NoSuchPaddingException, IOException {
-		String message = "UserId: " + resultSet.getString("userId") + "\n";
-		message += "Encryption Key Id: " + resultSet.getLong("encryptionKeyId")
-				+ "\n";
-		message += "Owner: " + resultSet.getString("owner") + "\n";
-		message += "Information: " + decrypt(resultSet.getBytes("information"))
-				+ "\n";
-		return message;
+	private static Reply decryptEHR(EncryptedEHR ehr, byte[] key) {
+		try {
+		String message = "UserId: " + ehr.getUserId() + "\n";
+		message += "Owner: " + ehr.getOwner() + "\n";
+		message += "Name: " + Crypto.decrypt(ehr.getName(), key)+ "\n";
+		message += "Age: " + Crypto.decrypt(ehr.getAge(), key)+ "\n";
+		message += "Weight: " + Crypto.decrypt(ehr.getWeight(), key)+ "\n";
+		message += "Diagnosis: " + Crypto.decrypt(ehr.getDiagnosis(), key)+ "\n";
+		message += "Prescriptions: " + Crypto.decrypt(ehr.getPrescriptions(), key)+ "\n";
+		message += "Other: " + Crypto.decrypt(ehr.getOther(), key)+ "\n";
+		
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return null;
 	}
 
 	/**
@@ -851,106 +863,5 @@ public class AuthServer implements Runnable {
 		return check;
 	}
 
-	/**
-	 * Encrypts a String via AES
-	 * 
-	 * @param s
-	 *            - to be encrypted
-	 * @return - a byte[] of the encrypted string
-	 */
-	private static byte[] encrypt(String s) throws IOException,
-			NoSuchAlgorithmException, NoSuchProviderException,
-			NoSuchPaddingException, InvalidKeyException,
-			InvalidAlgorithmParameterException {
-		Security
-				.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
-		byte[] input = s.getBytes();
 
-		SecretKeySpec key = new SecretKeySpec(keyBytes, "AES");
-		// IvParameterSpec ivSpec = new IvParameterSpec(ivBytes);
-		Cipher cipher = Cipher.getInstance("AES", "BC");
-
-		// encryption pass
-		cipher.init(Cipher.ENCRYPT_MODE, key);
-		ByteArrayInputStream bIn = new ByteArrayInputStream(input);
-		CipherInputStream cIn = new CipherInputStream(bIn, cipher);
-		ByteArrayOutputStream bOut = new ByteArrayOutputStream();
-
-		int ch;
-		while ((ch = cIn.read()) >= 0) {
-			bOut.write(ch);
-		}
-
-		byte[] cipherText = bOut.toByteArray();
-
-		return (cipherText);
-
-	}
-
-	private static byte[] encrypt(String s, byte[] keyBytes)
-			throws IOException, NoSuchAlgorithmException,
-			NoSuchProviderException, NoSuchPaddingException,
-			InvalidKeyException, InvalidAlgorithmParameterException {
-		Security
-				.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
-		byte[] input = s.getBytes();
-
-		SecretKeySpec key = new SecretKeySpec(keyBytes, "AES");
-		// IvParameterSpec ivSpec = new IvParameterSpec(ivBytes);
-		Cipher cipher = Cipher.getInstance("AES", "BC");
-
-		// encryption pass
-		cipher.init(Cipher.ENCRYPT_MODE, key);
-		ByteArrayInputStream bIn = new ByteArrayInputStream(input);
-		CipherInputStream cIn = new CipherInputStream(bIn, cipher);
-		ByteArrayOutputStream bOut = new ByteArrayOutputStream();
-
-		int ch;
-		while ((ch = cIn.read()) >= 0) {
-			bOut.write(ch);
-		}
-
-		byte[] cipherText = bOut.toByteArray();
-
-		return (cipherText);
-
-	}
-
-	/**
-	 * Decrypts a String via AES
-	 * 
-	 * @param s
-	 *            - to be decrypted
-	 * @return - a string of the decrypted byte[]
-	 */
-	private static String decrypt(byte[] s) throws InvalidKeyException,
-			InvalidAlgorithmParameterException, NoSuchAlgorithmException,
-			NoSuchProviderException, NoSuchPaddingException, IOException {
-		Cipher cipher = Cipher.getInstance("AES");
-		// decryption pass
-		SecretKeySpec key = new SecretKeySpec(keyBytes, "AES");
-		// IvParameterSpec ivSpec = new IvParameterSpec(ivBytes);
-		cipher.init(Cipher.DECRYPT_MODE, key);
-		ByteArrayOutputStream bOut = new ByteArrayOutputStream();
-		CipherOutputStream cOut = new CipherOutputStream(bOut, cipher);
-		cOut.write(s);
-		cOut.close();
-		return new String(bOut.toByteArray());
-	}
-
-	private static String decrypt(byte[] s, byte[] keyBytes)
-			throws InvalidKeyException, InvalidAlgorithmParameterException,
-			NoSuchAlgorithmException, NoSuchProviderException,
-			NoSuchPaddingException, IOException {
-		Cipher cipher = Cipher.getInstance("AES");
-		// decryption pass
-		SecretKeySpec key = new SecretKeySpec(keyBytes, "AES");
-		// IvParameterSpec ivSpec = new IvParameterSpec(ivBytes);
-		cipher.init(Cipher.DECRYPT_MODE, key);
-		ByteArrayOutputStream bOut = new ByteArrayOutputStream();
-		CipherOutputStream cOut = new CipherOutputStream(bOut, cipher);
-		cOut.write(s);
-		cOut.close();
-		return new String(bOut.toByteArray());
-	}
 }

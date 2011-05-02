@@ -2,6 +2,8 @@ package Server;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -9,19 +11,97 @@ import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.math.BigInteger;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.InvalidKeyException;
 import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.security.Security;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.RSAPrivateKeySpec;
 import java.security.spec.RSAPublicKeySpec;
 
 import javax.crypto.Cipher;
+import javax.crypto.CipherInputStream;
+import javax.crypto.CipherOutputStream;
+import javax.crypto.KeyGenerator;
+import javax.crypto.NoSuchPaddingException;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
 
 public class Crypto {
+	
+	public static byte[] generateAESKey() throws NoSuchAlgorithmException {
+		KeyGenerator kgen = KeyGenerator.getInstance("AES");
+		kgen.init(256); // 192 and 256 bits may not be available
+
+		SecretKey skey = kgen.generateKey();
+		return skey.getEncoded();
+	}
+	
+	/**
+	 * Encrypts a String via AES
+	 * 
+	 * @param s
+	 *            - to be encrypted
+	 * @return - a byte[] of the encrypted string
+	 */
+	public static byte[] encrypt(String s, byte[] keyBytes) throws IOException,
+			NoSuchAlgorithmException, NoSuchProviderException,
+			NoSuchPaddingException, InvalidKeyException,
+			InvalidAlgorithmParameterException {
+		Security
+				.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
+		byte[] input = s.getBytes();
+
+		SecretKeySpec key = new SecretKeySpec(keyBytes, "AES");
+		// IvParameterSpec ivSpec = new IvParameterSpec(ivBytes);
+		Cipher cipher = Cipher.getInstance("AES", "BC");
+
+		// encryption pass
+		cipher.init(Cipher.ENCRYPT_MODE, key);
+		ByteArrayInputStream bIn = new ByteArrayInputStream(input);
+		CipherInputStream cIn = new CipherInputStream(bIn, cipher);
+		ByteArrayOutputStream bOut = new ByteArrayOutputStream();
+
+		int ch;
+		while ((ch = cIn.read()) >= 0) {
+			bOut.write(ch);
+		}
+
+		byte[] cipherText = bOut.toByteArray();
+
+		return (cipherText);
+
+	}
+
+	/**
+	 * Decrypts a String via AES
+	 * 
+	 * @param s
+	 *            - to be decrypted
+	 * @return - a string of the decrypted byte[]
+	 */
+	public static String decrypt(byte[] s, byte[] keyBytes)
+			throws InvalidKeyException, InvalidAlgorithmParameterException,
+			NoSuchAlgorithmException, NoSuchProviderException,
+			NoSuchPaddingException, IOException {
+		Cipher cipher = Cipher.getInstance("AES");
+		// decryption pass
+		SecretKeySpec key = new SecretKeySpec(keyBytes, "AES");
+		// IvParameterSpec ivSpec = new IvParameterSpec(ivBytes);
+		cipher.init(Cipher.DECRYPT_MODE, key);
+		ByteArrayOutputStream bOut = new ByteArrayOutputStream();
+		CipherOutputStream cOut = new CipherOutputStream(bOut, cipher);
+		cOut.write(s);
+		cOut.close();
+		return new String(bOut.toByteArray());
+	}
+
 	public static byte[] rsaDecrypt(byte[] data, String keyFileName) {
 		try {
 			PrivateKey privKey = readPrivKeyFromFile(keyFileName);
@@ -53,7 +133,7 @@ public class Crypto {
 			oin.close();
 		}
 	}
-	
+
 	public static byte[] rsaEncrypt(byte[] data, String keyFileName) {
 		try {
 			PublicKey pubKey = readPubKeyFromFile(keyFileName);
