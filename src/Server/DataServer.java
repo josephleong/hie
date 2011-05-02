@@ -37,8 +37,8 @@ import Requests.Request;
 public class DataServer implements Runnable {
 
 	private static SSLSocket sslsocket;
-	private static ObjectOutputStream objOut = null;
-	private static ObjectInputStream objIn = null;
+	private ObjectOutputStream objOut = null;
+	private ObjectInputStream objIn = null;
 	
 	private DataServer(SSLSocket sock) {
 		sslsocket = sock;
@@ -121,7 +121,7 @@ public class DataServer implements Runnable {
 	 *            - client request
 	 * @return - a Reply to a client based on the Request and information passed
 	 */
-	private static Reply processRequest(Request request) {
+	private Reply processRequest(Request request) {
 		Reply response = new Reply("Error Processing Request.");
 		try {
 			if (request instanceof ReadRecord) {
@@ -147,7 +147,7 @@ public class DataServer implements Runnable {
 	 *            - the requesting agent's Id
 	 * @return - Server's Reply
 	 */
-	private static Reply getRecord(String userId) {
+	private Reply getRecord(String userId) {
 		Connection connection = null;
 		ResultSet resultSet = null;
 		Statement statement = null;
@@ -185,7 +185,7 @@ public class DataServer implements Runnable {
 	 *            - query resultSet
 	 * @return a string result
 	 */
-	private static Reply recordToReply(ResultSet resultSet) {
+	private Reply recordToReply(ResultSet resultSet) {
 		try {
 			return new EncryptedEHR(resultSet.getString("userId"), resultSet.getString("owner"), resultSet.getBytes("name"), resultSet.getBytes("age"), resultSet.getBytes("weight"), resultSet.getBytes("diagnosis"), resultSet.getBytes("prescriptions"), resultSet.getBytes("other"));
 		} catch (SQLException e) {

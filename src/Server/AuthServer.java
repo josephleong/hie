@@ -32,11 +32,11 @@ public class AuthServer implements Runnable {
 	private static final String KSIP = "localhost";
 	
 	private static SSLSocket sslsocket;
-	private static ObjectOutputStream DSobjOut = null;
-	private static ObjectInputStream DSobjIn = null;
-	private static ObjectOutputStream KSobjOut = null;
-	private static ObjectInputStream KSobjIn = null;
-	private static String userId = null;
+	private ObjectOutputStream DSobjOut = null;
+	private ObjectInputStream DSobjIn = null;
+	private ObjectOutputStream KSobjOut = null;
+	private ObjectInputStream KSobjIn = null;
+	private String userId = null;
 
 	private AuthServer(SSLSocket sock) {
 		sslsocket = sock;
@@ -75,7 +75,7 @@ public class AuthServer implements Runnable {
 		}
 	}
 	
-	private static void connectToDS(String ip) {
+	private void connectToDS(String ip) {
 		try {
 			SSLSocketFactory sslsocketfactory = (SSLSocketFactory) SSLSocketFactory.getDefault();
 			SSLSocket sslsocket = (SSLSocket) sslsocketfactory.createSocket(ip, 9998);
@@ -102,7 +102,7 @@ public class AuthServer implements Runnable {
 		}
 	}
 	
-	private static void connectToKS(String ip) {
+	private void connectToKS(String ip) {
 		try {
 			SSLSocketFactory sslsocketfactory = (SSLSocketFactory) SSLSocketFactory.getDefault();
 			SSLSocket sslsocket = (SSLSocket) sslsocketfactory.createSocket(ip, 9997);
@@ -159,11 +159,10 @@ public class AuthServer implements Runnable {
 	 *            - client request
 	 * @return - a Reply to a client based on the Request and information passed
 	 */
-	private static Reply processRequest(Request request)
+	private Reply processRequest(Request request)
 			throws NoSuchAlgorithmException {
 		Reply response = new Reply("Error Processing Request.");
 		try {
-			boolean valid = false;
 
 			if (request instanceof ReadRecord) {
 				if(((ReadRecord) request).getType().equals("phr") && ((ReadRecord) request).getRecordId().equals(userId)) {
@@ -178,16 +177,13 @@ public class AuthServer implements Runnable {
 				}
 				
 			} else if (request instanceof HISPLogin) {
-				valid = checkHISPUser(((HISPLogin) request).getUserid(), ((HISPLogin) request)
-						.getPassword());
-				if (valid) {
+				if (checkHISPUser(((HISPLogin) request).getUserid(), ((HISPLogin) request)
+						.getPassword())) {
 					userId = ((HISPLogin) request).getUserid();
 					response = new Reply("Welcome!");
 				} else response = new Reply("Invalid User Login");
 			} else if (request instanceof PHRLogin) {
-				valid = checkPHRUser(((PHRLogin) request).getUserid(), ((PHRLogin) request).getPassword());
-				
-				if (valid) {
+				if (checkPHRUser(((PHRLogin) request).getUserid(), ((PHRLogin) request).getPassword())) {
 					userId = ((PHRLogin) request).getUserid();
 					response = new Reply("Welcome!");
 				} else response = new Reply("Invalid User Login");
@@ -200,7 +196,7 @@ public class AuthServer implements Runnable {
 		return response;
 	}
 
-	private static boolean hasReadAccess(String recordId) {
+	private boolean hasReadAccess(String recordId) {
 		Connection connection = null;
 		ResultSet resultSet = null;
 		Statement statement = null;
@@ -239,7 +235,7 @@ public class AuthServer implements Runnable {
 	 * @return - true if userId corresponds to a doctor, false otherwise
 	 */
 	@SuppressWarnings("unused")
-	private static boolean isADoctor() {
+	private boolean isADoctor() {
 		Connection connection = null;
 		ResultSet resultSet = null;
 		Statement statement = null;
@@ -283,7 +279,7 @@ public class AuthServer implements Runnable {
 	 *            the requested record's associated userId
 	 * @return - Server's Reply
 	 */
-	private static Reply getRecord(ReadRecord rr) {
+	private Reply getRecord(ReadRecord rr) {
 		try {
 
 			DSobjOut.writeObject(rr);
