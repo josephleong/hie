@@ -110,6 +110,7 @@ public class DataServer implements Runnable {
 				else logInfo(((ReadRecord) request).getAgentId()+" READ " +((ReadRecord) request).getRecordId()+"'s records");
 			} else if(request instanceof CreateEncryptedEHR) { 
 				insertEHR((CreateEncryptedEHR) request);
+				response = new Reply("Successfully Created");
 				logInfo(((CreateEncryptedEHR) request).getOwner()+" INSRTED " + ((CreateEncryptedEHR) request).getUserId()+"'s record");
 			}
 		} catch (Exception e) {
@@ -196,8 +197,7 @@ public class DataServer implements Runnable {
 				resultSet = statement
 					.executeQuery("select * from records where userId = '"
 							+ rr.getRecordId() + "';");
-				
-				
+								
 			if (resultSet.next()) {
 				response = resultSetToEncEHR(resultSet);
 

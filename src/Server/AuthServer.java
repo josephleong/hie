@@ -227,8 +227,8 @@ public class AuthServer implements Runnable {
 					KSobjOut.writeObject(cr.getUserId());
 					KSobjOut.writeObject(key);
 					addReadAccess(cr.getUserId(), cr.getOwner());
-//					addWriteAccess(cr.getUserId(), cr.getOwner());
-					response = new Reply("EHR successfully added.");
+					addWriteAccess(cr.getUserId(), cr.getOwner());
+					response = (Reply) DSobjIn.readObject();
 					logInfo(((CreateRecord) request).getOwner()+" CREATED " + ((CreateRecord) request).getUserId()+"'s record");
 				} else response = new Reply("You aren't a doctor");
 			}
@@ -261,7 +261,26 @@ public class AuthServer implements Runnable {
 		}
 	}
 		
+	private void addWriteAccess(String uid, String owner) {
+		Connection connection = null;
+		Statement statement = null;
+		try {
+			Class.forName("org.sqlite.JDBC");
+			connection = DriverManager.getConnection("jdbc:sqlite:user.db");
+			statement = connection.createStatement();
+			statement.executeUpdate("insert into writeAccess values('"+uid+"', '"+owner+"');");
 
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			try {
+				statement.close();
+				connection.close();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+	}
 
 	/**
 	 * Retrieves an EHR 
@@ -271,26 +290,28 @@ public class AuthServer implements Runnable {
 	 * @return - Server's Reply
 	 */
 	private Reply getRecord(ReadRecord rr) {
+		Reply rep = null;
 		try {
+
 			if (rr.getType().equals("ra")) {
 				DSobjOut.writeObject(getRAPermissions(rr));
 				ArrayList<EncryptedEHR> ehrList = (ArrayList<EncryptedEHR>) ((RARecordReply) DSobjIn
 						.readObject()).getList();
 				byte[] key = null;
 				String records = "";
-				for(EncryptedEHR ehr: ehrList) {
+				for (EncryptedEHR ehr : ehrList) {
 					KSobjOut.writeObject("get");
 					KSobjOut.writeObject(ehr.getUserId());
 
 					key = (byte[]) KSobjIn.readObject();
 
-					records += decryptEHR(ehr, key)+"\n";
+					records += decryptEHR(ehr, key) + "\n";
 
 				}
 				return new Reply(records);
 			} else {
 				DSobjOut.writeObject(rr);
-				Reply rep = (Reply) DSobjIn.readObject();
+				rep = (Reply) DSobjIn.readObject();
 				if (!rep.getMessage().equals("Error Processing Request.")) {
 
 					EncryptedEHR ehr = (EncryptedEHR) rep;
@@ -300,9 +321,7 @@ public class AuthServer implements Runnable {
 					byte[] key = (byte[]) KSobjIn.readObject();
 
 					return decryptEHR(ehr, key);
-
 				}
-
 				return rep;
 			}
 		} catch (Exception e) {
