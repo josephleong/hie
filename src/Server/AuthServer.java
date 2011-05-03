@@ -310,10 +310,10 @@ public class AuthServer implements Runnable {
 							+ recordId + "';");
 
 			while (resultSet.next()) {
-				if (resultSet.getString("agentId").equals(userId))
+				if (resultSet.getString("agentId").equals(userId)) {
 					check = true;
+				}
 			}
-
 		} catch (Exception e) {
 			e.printStackTrace();
 		} finally {

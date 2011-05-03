@@ -89,10 +89,36 @@ public class UserDB {
     	prepRA.setString(4, "age >= 20 AND age <= 50");
     	prepRA.addBatch();
     	
+    	PreparedStatement prepRead = conn.prepareStatement(
+        "insert into readAccess values (?, ?);");
+        prepRead.setString(1, "Patient1");
+        prepRead.setString(2, "Doctor1");
+        prepRead.addBatch();
+        prepRead.setString(1, "Patient2");
+        prepRead.setString(2, "Doctor2");
+        prepRead.addBatch();
+        prepRead.setString(1, "a");
+        prepRead.setString(2, "d");
+        prepRead.addBatch();
+    	
+    	PreparedStatement prepWrite = conn.prepareStatement(
+        "insert into readAccess values (?, ?);");
+    	prepWrite.setString(1, "Patient1");
+    	prepWrite.setString(2, "Doctor1");
+    	prepWrite.addBatch();
+    	prepWrite.setString(1, "Patient2");
+    	prepWrite.setString(2, "Doctor2");
+    	prepWrite.addBatch();
+    	prepWrite.setString(1, "a");
+    	prepWrite.setString(2, "d");
+    	prepWrite.addBatch();
+    	
         conn.setAutoCommit(false);
         prepPHR.executeBatch();
         prepHISP.executeBatch();
         prepRA.executeBatch();
+        prepRead.executeBatch();
+        prepWrite.executeBatch();
         conn.setAutoCommit(true);
 
 //        m.update("a".getBytes()); 

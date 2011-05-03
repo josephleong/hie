@@ -47,7 +47,7 @@ public class StoreDB {
 	    prep.addBatch();
 	    
 	    prep.setString(1, "a");
-	    prep.setString(2, "Doctor2");
+	    prep.setString(2, "d");
 	    prep.setBytes(3, Crypto.encrypt("Joe", key3));
 	    prep.setBytes(4, Crypto.encrypt("21", key3));
 	    prep.setBytes(5, Crypto.encrypt("135", key3));

@@ -105,7 +105,7 @@ public class HISPagent {
 		if(command.equals("view") || command.equals("1")) {
 			System.out.println("What is the patients userId?");
 			String patientId = bufferedreader.readLine();
-			request = new ReadRecord(patientId, "hisp");
+			request = new ReadRecord(patientId, "hisp", username);
 		}
 		else if(command.equals("create") || command.equals("2")) {
 			System.out.println("What is the patients's userId?");
