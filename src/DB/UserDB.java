@@ -102,7 +102,7 @@ public class UserDB {
         prepRead.addBatch();
     	
     	PreparedStatement prepWrite = conn.prepareStatement(
-        "insert into readAccess values (?, ?);");
+        "insert into writeAccess values (?, ?);");
     	prepWrite.setString(1, "Patient1");
     	prepWrite.setString(2, "Doctor1");
     	prepWrite.addBatch();

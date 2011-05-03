@@ -12,6 +12,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -26,6 +27,7 @@ import javax.net.ssl.SSLServerSocket;
 import javax.net.ssl.SSLServerSocketFactory;
 import javax.net.ssl.SSLSocket;
 
+import Requests.CreateEncryptedEHR;
 import Requests.EncryptedEHR;
 import Requests.RAReadRecord;
 import Requests.RARecordReply;
@@ -102,9 +104,13 @@ public class DataServer implements Runnable {
 		try {
 			if (request instanceof ReadRecord) {
 				request = (ReadRecord) request;
-
 				response = getRecord(((ReadRecord) request));
+				if(!((ReadRecord) request).getType().equals("hisp"))
 				logInfo(((ReadRecord) request).getAgentId()+" READ records");
+				else logInfo(((ReadRecord) request).getAgentId()+" READ " +((ReadRecord) request).getRecordId()+"'s records");
+			} else if(request instanceof CreateEncryptedEHR) { 
+				insertEHR((CreateEncryptedEHR) request);
+				logInfo(((CreateEncryptedEHR) request).getOwner()+" INSRTED " + ((CreateEncryptedEHR) request).getUserId()+"'s record");
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -113,6 +119,50 @@ public class DataServer implements Runnable {
 		return response;
 	}
 	
+	private void insertEHR(CreateEncryptedEHR ehr) {
+		Connection conn = null;
+		Statement statement = null;
+		try {
+			Class.forName("org.sqlite.JDBC");
+			conn = DriverManager.getConnection("jdbc:sqlite:ds.db");
+			statement = conn.createStatement();
+//			statement.executeUpdate("insert into records values (" +
+//					ehr.getUserId() + ", "+
+//					ehr.getOwner() + ", "+
+//					ehr.getName() + ", "+
+//					ehr.getAge() + ", "+
+//					ehr.getWeight() + ", "+
+//					ehr.getDiagnosis() + ", "+
+//					ehr.getPrescriptions() + ", "+
+//					ehr.getOther() + ", "+
+//					";");
+			PreparedStatement prep = conn.prepareStatement(
+	        "insert into records values (?, ?, ?, ?, ?, ?, ?, ?);");
+
+		    prep.setString(1, ehr.getUserId());
+		    prep.setString(2, ehr.getOwner());
+		    prep.setBytes(3, ehr.getName());
+		    prep.setBytes(4, ehr.getAge());
+		    prep.setBytes(5, ehr.getWeight());
+		    prep.setBytes(6, ehr.getDiagnosis());
+		    prep.setBytes(7, ehr.getPrescriptions());
+		    prep.setBytes(8, ehr.getOther());
+		    prep.addBatch();
+		    		    
+		    conn.setAutoCommit(false);
+		    prep.executeBatch();
+		    conn.setAutoCommit(true);
+		} catch (Exception e) {
+			e.printStackTrace();
+		} try {
+			statement.close();
+			conn.close();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		
+	}
+
 	/**
 	 * Retrieves an EHR for an agent
 	 * 

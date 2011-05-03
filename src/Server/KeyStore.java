@@ -126,6 +126,13 @@ public class KeyStore implements Runnable {
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
+		} finally {
+			try {
+				statement.close();
+				connection.close();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 		}
 		return null;
 	}

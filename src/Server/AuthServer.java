@@ -23,6 +23,8 @@ import javax.net.ssl.SSLServerSocketFactory;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 
+import Requests.CreateEncryptedEHR;
+import Requests.CreateRecord;
 import Requests.EncryptedEHR;
 import Requests.HISPLogin;
 import Requests.PHRLogin;
@@ -185,9 +187,11 @@ public class AuthServer implements Runnable {
 				if(((ReadRecord) request).getType().equals("phr") && ((ReadRecord) request).getRecordId().equals(userId)) {
 					response = getRecord((ReadRecord) request);
 					logInfo("PHR READ record "+ ((ReadRecord) request).getRecordId());
-				} else if(((ReadRecord) request).getType().equals("hisp") && hasReadAccess(((ReadRecord) request).getRecordId())) {
+				} else if(((ReadRecord) request).getType().equals("hisp")) {
+					if(hasReadAccess(((ReadRecord) request).getRecordId())) {
 					response = getRecord((ReadRecord) request);
 					logInfo("HISP "+((ReadRecord) request).getAgentId() + " READ record "+ ((ReadRecord) request).getRecordId());
+					} else response = new Reply("You don't have read access");
 				} else if(((ReadRecord) request).getType().equals("ra")) {
 					response = getRecord((ReadRecord) request);
 					logInfo("RA "+((ReadRecord) request).getAgentId() + " READ records");
@@ -208,6 +212,25 @@ public class AuthServer implements Runnable {
 					userId = ((RALogin) request).getUserid();
 					response = new Reply("Welcome!");
 				} else response = new Reply("Invalid User Login");
+			} else if(request instanceof CreateRecord) {
+				if(isADoctor()) {
+					byte[] key = Crypto.generateAESKey();
+					CreateRecord cr = (CreateRecord) request;
+					DSobjOut.writeObject(new CreateEncryptedEHR(cr.getUserId(), cr
+							.getOwner(), Crypto.encrypt(cr.getName(), key),
+							Crypto.encrypt(cr.getAge(), key), Crypto.encrypt(cr
+									.getWeight(), key), Crypto.encrypt(cr
+									.getDiagnosis(), key), Crypto.encrypt(cr
+									.getPrescriptions(), key), Crypto.encrypt(cr
+									.getOther(), key)));
+					KSobjOut.writeObject("add");
+					KSobjOut.writeObject(cr.getUserId());
+					KSobjOut.writeObject(key);
+					addReadAccess(cr.getUserId(), cr.getOwner());
+//					addWriteAccess(cr.getUserId(), cr.getOwner());
+					response = new Reply("EHR successfully added.");
+					logInfo(((CreateRecord) request).getOwner()+" CREATED " + ((CreateRecord) request).getUserId()+"'s record");
+				} else response = new Reply("You aren't a doctor");
 			}
 
 		} catch (Exception e) {
@@ -217,6 +240,29 @@ public class AuthServer implements Runnable {
 		return response;
 	}
 	
+	private void addReadAccess(String uid, String owner) {
+		Connection connection = null;
+		Statement statement = null;
+		try {
+			Class.forName("org.sqlite.JDBC");
+			connection = DriverManager.getConnection("jdbc:sqlite:user.db");
+			statement = connection.createStatement();
+			statement.executeUpdate("insert into readAccess values('"+uid+"', '"+owner+"');");
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			try {
+				statement.close();
+				connection.close();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+	}
+		
+
+
 	/**
 	 * Retrieves an EHR 
 	 * 
@@ -344,7 +390,6 @@ public class AuthServer implements Runnable {
 	 * @param userId
 	 * @return - true if userId corresponds to a doctor, false otherwise
 	 */
-	@SuppressWarnings("unused")
 	private boolean isADoctor() {
 		Connection connection = null;
 		ResultSet resultSet = null;
