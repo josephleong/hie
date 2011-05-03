@@ -129,31 +129,54 @@ public class DataServer implements Runnable {
 	
 	private Reply updateRecord(UpdateRecord request) {
 		Connection connection = null;
-		Statement statement = null;
 		try {
 			Class.forName("org.sqlite.JDBC");
 			connection = DriverManager.getConnection("jdbc:sqlite:ds.db");
-			statement = connection.createStatement();
 			String updateString = "update records set ";
-
-			if(!request.getName().equals("")) 
-				updateString+="name = '"+request.getName()+"', ";
-			if(!request.getAge().equals("")) 
-				updateString+="age = '"+request.getAge()+"', ";
-			if(!request.getWeight().equals("")) 
-				updateString+="weight = '"+request.getWeight()+"', ";
-			if(!request.getDiagnosis().equals("")) 
-				updateString+="diagnosis = '"+request.getDiagnosis()+"', ";
-			if(!request.getPrescriptions().equals("")) 
-				updateString+="prescriptions = '"+request.getPrescriptions()+"', ";
-			if(!request.getOther().equals("")) 
-				updateString+="other = '"+request.getOther()+"', ";
+			
+			if(!request.getName().equals("")) {
+				updateString+="name = ?, ";}
+			if(!request.getAge().equals("")) {
+				updateString+="age = ?, ";}
+			if(!request.getWeight().equals("")) {
+				updateString+="weight = ?, ";}
+			if(!request.getDiagnosis().equals("")) {
+				updateString+="diagnosis = ?, ";}
+			if(!request.getPrescriptions().equals("")) {
+				updateString+="prescriptions = ?, ";}
+			if(!request.getOther().equals("")) {
+				updateString+="other = ?, ";}
 			updateString = updateString.substring(0, updateString.length()-2);
 			updateString+= " where userId = '"+request.getUserId()+"';";
 					
-			System.out.println(updateString);
-			if(!updateString.equals("update records se"+" where userId = '"+request.getUserId()+"';"))
-				statement.executeUpdate(updateString );
+			//System.out.println(updateString);
+			PreparedStatement prep = connection.prepareStatement(updateString);
+			int i = 1;
+			if(!request.getName().equals("")) {
+				prep.setBytes(i, Crypto.encrypt(request.getName(), request.getKey()));
+				i++;
+			}
+			if(!request.getAge().equals("")) {
+				prep.setBytes(i, Crypto.encrypt(request.getAge(), request.getKey()));
+				i++;
+			}
+			if(!request.getWeight().equals("")) {
+				prep.setBytes(i, Crypto.encrypt(request.getWeight(), request.getKey()));
+				i++;
+			}	
+			if(!request.getDiagnosis().equals("")) {
+				prep.setBytes(i, Crypto.encrypt(request.getDiagnosis(), request.getKey()));
+				i++;
+			}	
+			if(!request.getPrescriptions().equals("")) {
+				prep.setBytes(i, Crypto.encrypt(request.getPrescriptions(), request.getKey()));
+				i++;
+			}
+			if(!request.getOther().equals("")) {
+				prep.setBytes(i, Crypto.encrypt(request.getOther(), request.getKey()));
+				i++;
+			}
+			prep.execute();
 			return (new Reply("Update Success"));			
 			
 			
@@ -161,7 +184,6 @@ public class DataServer implements Runnable {
 			e.printStackTrace();
 		} 
 		try {
-			statement.close();
 			connection.close();
 		} catch (Exception e) {
 			e.printStackTrace();
