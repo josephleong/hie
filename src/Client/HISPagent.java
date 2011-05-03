@@ -20,6 +20,8 @@ import Requests.Request;
 import Requests.RevokeReadAccess;
 import Requests.RevokeWriteAccess;
 import Requests.UpdateRecord;
+import Requests.VerificationRequest;
+import Server.Crypto;
 
 /**
  * HISP client Agent, Handles all the operations a Hisp agent could make
@@ -45,7 +47,7 @@ public class HISPagent {
                        
             InputStream sslIn = sslsocket.getInputStream();
             ObjectInputStream objIn = new ObjectInputStream(sslIn);
-            
+            if(!verifyAuthServer(objOut, objIn)) { System.out.println("Couldn't Verify"); return; }
            
             Reply response = null;
             Request request = null;
@@ -201,5 +203,19 @@ public class HISPagent {
 			exception.printStackTrace();
 			return null;
 		}
+	}
+	
+	private static boolean verifyAuthServer(ObjectOutputStream objOut,
+			ObjectInputStream objIn) throws IOException, ClassNotFoundException {
+		String randNum = Long
+				.toString(((long) (Math.random() * Long.MAX_VALUE)));
+		objOut.writeObject(new VerificationRequest(Crypto.rsaEncrypt(
+				randNum.getBytes(), "authpublic.key")));
+		String theirRandNum = (String) objIn.readObject();
+		if (!randNum.equals(theirRandNum)) {
+			System.out.println("Not Verified");
+			return false;
+		}
+		return true;
 	}
 }

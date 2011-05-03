@@ -43,6 +43,8 @@ public class AuthServer implements Runnable {
 	private ObjectInputStream DSobjIn = null;
 	private ObjectOutputStream KSobjOut = null;
 	private ObjectInputStream KSobjIn = null;
+	private ObjectInputStream objIn  = null;
+	private ObjectOutputStream objOut = null;
 	private String userId = null;
 
 	private AuthServer(SSLSocket sock) {
@@ -62,9 +64,11 @@ public class AuthServer implements Runnable {
 		try {
 
 			OutputStream sslout = sslsocket.getOutputStream();
-			ObjectOutputStream objOut = new ObjectOutputStream(sslout);
+			objOut = new ObjectOutputStream(sslout);
 			InputStream sslIn = sslsocket.getInputStream();
-			ObjectInputStream objIn = new ObjectInputStream(sslIn);
+			objIn = new ObjectInputStream(sslIn);
+			
+			respondToVerificationRequest();
 			connectToDS(DSIP);
 			connectToKS(KSIP);
 			
@@ -133,6 +137,12 @@ public class AuthServer implements Runnable {
 		} catch (Exception exception) {
 			exception.printStackTrace();
 		}
+	}
+
+	private void respondToVerificationRequest() throws IOException,
+			ClassNotFoundException {
+		VerificationRequest theirVerificationRequest = (VerificationRequest) objIn.readObject();
+		objOut.writeObject(new String(Crypto.rsaDecrypt(theirVerificationRequest.getEncryptedMessage(), "authprivate.key")));
 	}
 
 	/**

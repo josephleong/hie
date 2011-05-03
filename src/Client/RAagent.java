@@ -1,6 +1,7 @@
 package Client;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
@@ -13,6 +14,8 @@ import javax.net.ssl.SSLSocketFactory;
 import Requests.RALogin;
 import Requests.ReadRecord;
 import Requests.Reply;
+import Requests.VerificationRequest;
+import Server.Crypto;
 
 /**
  * PHR agent, Handles all the operations a PHR agent could make
@@ -39,7 +42,7 @@ public class RAagent {
                        
             InputStream sslIn = sslsocket.getInputStream();
             ObjectInputStream objIn = new ObjectInputStream(sslIn);
-            
+            if(!verifyAuthServer(objOut, objIn)) { System.out.println("Couldn't Verify"); return; }
            
             Reply response = null;
             String username = "";
@@ -82,5 +85,19 @@ public class RAagent {
 			exception.printStackTrace();
 			return null;
 		}
+	}
+	
+	private static boolean verifyAuthServer(ObjectOutputStream objOut,
+			ObjectInputStream objIn) throws IOException, ClassNotFoundException {
+		String randNum = Long
+				.toString(((long) (Math.random() * Long.MAX_VALUE)));
+		objOut.writeObject(new VerificationRequest(Crypto.rsaEncrypt(
+				randNum.getBytes(), "authpublic.key")));
+		String theirRandNum = (String) objIn.readObject();
+		if (!randNum.equals(theirRandNum)) {
+			System.out.println("Not Verified");
+			return false;
+		}
+		return true;
 	}
 }
