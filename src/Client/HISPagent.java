@@ -133,14 +133,14 @@ public class HISPagent {
 			String agentId = bufferedreader.readLine();
 			System.out.println("What is the patients userId?");
 			String patientId = bufferedreader.readLine();
-			request = new GrantReadAccess(username, password, agentId, patientId);
+			request = new GrantReadAccess(agentId, patientId);
 		}
 		else if(command.equals("revoke read") || command.equals("4")) {
 			System.out.println("What is the agent's userId?");
 			String agentId = bufferedreader.readLine();
 			System.out.println("What is the patients userId?");
 			String patientId = bufferedreader.readLine();
-			request = new RevokeReadAccess(username, password, agentId, patientId);
+			request = new RevokeReadAccess(agentId, patientId);
 		}
 		else if(command.equals("grant write") || command.equals("5")) {
 			System.out.println("What is the agent's userId?");

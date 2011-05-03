@@ -26,7 +26,10 @@ import javax.net.ssl.SSLSocketFactory;
 import Requests.CreateEncryptedEHR;
 import Requests.CreateRecord;
 import Requests.EncryptedEHR;
+import Requests.GrantReadAccess;
+import Requests.GrantWriteAccess;
 import Requests.HISPLogin;
+import Requests.IsOwnerCheck;
 import Requests.PHRLogin;
 import Requests.RALogin;
 import Requests.RAReadRecord;
@@ -34,6 +37,8 @@ import Requests.RARecordReply;
 import Requests.ReadRecord;
 import Requests.Reply;
 import Requests.Request;
+import Requests.RevokeReadAccess;
+import Requests.RevokeWriteAccess;
 import Requests.VerificationRequest;
 
 public class AuthServer implements Runnable {
@@ -182,21 +187,7 @@ public class AuthServer implements Runnable {
 			throws NoSuchAlgorithmException {
 		Reply response = new Reply("Error Processing Request.");
 		try {
-
-			if (request instanceof ReadRecord) {
-				if(((ReadRecord) request).getType().equals("phr") && ((ReadRecord) request).getRecordId().equals(userId)) {
-					response = getRecord((ReadRecord) request);
-					logInfo("PHR READ record "+ ((ReadRecord) request).getRecordId());
-				} else if(((ReadRecord) request).getType().equals("hisp")) {
-					if(hasReadAccess(((ReadRecord) request).getRecordId())) {
-					response = getRecord((ReadRecord) request);
-					logInfo("HISP "+((ReadRecord) request).getAgentId() + " READ record "+ ((ReadRecord) request).getRecordId());
-					} else response = new Reply("You don't have read access");
-				} else if(((ReadRecord) request).getType().equals("ra")) {
-					response = getRecord((ReadRecord) request);
-					logInfo("RA "+((ReadRecord) request).getAgentId() + " READ records");
-				}		
-			} else if (request instanceof HISPLogin) {
+			if (request instanceof HISPLogin) {
 				if (checkHISPUser(((HISPLogin) request).getUserid(), ((HISPLogin) request)
 						.getPassword())) {
 					userId = ((HISPLogin) request).getUserid();
@@ -212,7 +203,22 @@ public class AuthServer implements Runnable {
 					userId = ((RALogin) request).getUserid();
 					response = new Reply("Welcome!");
 				} else response = new Reply("Invalid User Login");
-			} else if(request instanceof CreateRecord) {
+			}
+			else if(userId == null) response = new Reply("Please Login First");
+			else if (request instanceof ReadRecord) {
+				if(((ReadRecord) request).getType().equals("phr") && ((ReadRecord) request).getRecordId().equals(userId)) {
+					response = getRecord((ReadRecord) request);
+					logInfo("PHR READ record "+ ((ReadRecord) request).getRecordId());
+				} else if(((ReadRecord) request).getType().equals("hisp")) {
+					if(hasReadAccess(((ReadRecord) request).getRecordId())) {
+					response = getRecord((ReadRecord) request);
+					logInfo("HISP "+((ReadRecord) request).getAgentId() + " READ record "+ ((ReadRecord) request).getRecordId());
+					} else response = new Reply("You don't have read access");
+				} else if(((ReadRecord) request).getType().equals("ra")) {
+					response = getRecord((ReadRecord) request);
+					logInfo("RA "+((ReadRecord) request).getAgentId() + " READ records");
+				}		
+			}  else if(request instanceof CreateRecord) {
 				if(isADoctor()) {
 					byte[] key = Crypto.generateAESKey();
 					CreateRecord cr = (CreateRecord) request;
@@ -231,7 +237,32 @@ public class AuthServer implements Runnable {
 					response = (Reply) DSobjIn.readObject();
 					logInfo(((CreateRecord) request).getOwner()+" CREATED " + ((CreateRecord) request).getUserId()+"'s record");
 				} else response = new Reply("You aren't a doctor");
+			} else if(request instanceof GrantReadAccess) {
+				if( isADoctor() && hasReadAccess(((GrantReadAccess) request).getPatientId())) {
+					addReadAccess(((GrantReadAccess) request).getPatientId(),((GrantReadAccess) request).getGranteeId());
+					response = new Reply("Successfully Granted Read Access");
+					logInfo(((GrantReadAccess) request).getGranteeId() + " was GRANTED READ to "+((GrantReadAccess) request).getPatientId()+" by +" +userId);
+				} else response = new Reply("You don't have permissions to do that");
+			}  else if(request instanceof GrantWriteAccess) {
+				if( isADoctor() && hasWriteAccess(((GrantWriteAccess) request).getPatientId())) {
+					addWriteAccess( ((GrantWriteAccess) request).getPatientId(),((GrantWriteAccess) request).getGranteeId());
+					response = new Reply("Successfully Granted Write Access");
+					logInfo(((GrantWriteAccess) request).getGranteeId() + " was GRANTED WRITE to "+((GrantWriteAccess) request).getPatientId()+" by " +userId);
+				} else response = new Reply("You don't have permissions to do that");
+			} else if(request instanceof RevokeReadAccess) {
+				if(isADoctor() && isOwner(((RevokeReadAccess) request).getPatientId())) {
+					revokeReadAccess(((RevokeReadAccess) request).getPatientId(),((RevokeReadAccess) request).getGranteeId());
+					response = new Reply("Successfully Revoked Read Access");
+					logInfo(((RevokeReadAccess) request).getGranteeId() + " was REVOKED READ to "+((RevokeReadAccess) request).getPatientId()+" by " +userId);
+				} else response = new Reply("Invalid Request");
+			} if(request instanceof RevokeWriteAccess) {
+				if(isADoctor() && isOwner(((RevokeWriteAccess) request).getPatientId())) {
+					revokeWriteAccess(((RevokeWriteAccess) request).getPatientId(),((RevokeWriteAccess) request).getGranteeId());
+					response = new Reply("Successfully Revoked Write Access");
+					logInfo(((RevokeWriteAccess) request).getGranteeId() + " was REVOKED WRITE to "+((RevokeWriteAccess) request).getPatientId()+" by " +userId);
+				} else response = new Reply("Invalid Request");
 			}
+
 
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -240,6 +271,62 @@ public class AuthServer implements Runnable {
 		return response;
 	}
 	
+	private void revokeReadAccess(String patientId, String granteeId) {
+		Connection connection = null;
+		ResultSet resultSet = null;
+		Statement statement = null;
+		try {
+			Class.forName("org.sqlite.JDBC");
+			connection = DriverManager.getConnection("jdbc:sqlite:user.db");
+			statement = connection.createStatement();
+	        resultSet = statement.executeQuery("select * from readAccess where userId = '" + patientId + "' and agentId = '" + granteeId + "';");
+			if (resultSet.next()) {
+				statement.execute("delete from readAccess " +
+								"where userId = '" + patientId + "' and " +
+								"agentId = '" + granteeId + "';");
+
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			try {
+				statement.close();
+				connection.close();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+		
+	}
+	
+	private void revokeWriteAccess(String patientId, String granteeId) {
+		Connection connection = null;
+		ResultSet resultSet = null;
+		Statement statement = null;
+		try {
+			Class.forName("org.sqlite.JDBC");
+			connection = DriverManager.getConnection("jdbc:sqlite:user.db");
+			statement = connection.createStatement();
+	        resultSet = statement.executeQuery("select * from writeAccess where userId = '" + patientId + "' and agentId = '" + granteeId + "';");
+			if (resultSet.next()) {
+				statement.execute("delete from writeAccess " +
+								"where userId = '" + patientId + "' and " +
+								"agentId = '" + granteeId + "';");
+
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			try {
+				statement.close();
+				connection.close();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+		
+	}
+
 	private void addReadAccess(String uid, String owner) {
 		Connection connection = null;
 		Statement statement = null;
@@ -402,6 +489,38 @@ public class AuthServer implements Runnable {
 		return check;
 
 	}
+	
+	private boolean hasWriteAccess(String recordId) {
+		Connection connection = null;
+		ResultSet resultSet = null;
+		Statement statement = null;
+		boolean check = false;
+		try {
+			Class.forName("org.sqlite.JDBC");
+			connection = DriverManager.getConnection("jdbc:sqlite:user.db");
+			statement = connection.createStatement();
+			resultSet = statement
+					.executeQuery("select agentId from writeAccess where userId = '"
+							+ recordId + "';");
+
+			while (resultSet.next()) {
+				if (resultSet.getString("agentId").equals(userId)) {
+					check = true;
+				}
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			try {
+				statement.close();
+				connection.close();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+		return check;
+
+	}
 
 	/**
 	 * Checks to see if a user is a Doctor
@@ -444,7 +563,16 @@ public class AuthServer implements Runnable {
 		return check;
 	}
 
-	
+	private boolean isOwner(String recordId) {
+		try {
+			DSobjOut.writeObject(new IsOwnerCheck(userId, recordId));
+		
+		if(((Reply)DSobjIn.readObject()).getMessage().equals("true")) return true;
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return false;
+	}
 	
 	private RAReadRecord getRAPermissions(ReadRecord rr) {
 		try {

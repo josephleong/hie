@@ -15,7 +15,12 @@ public class RevokeWriteAccess extends Request {
 		this.setGranteeId(granteeId);
 		this.setPatientId(patientId);
 	}
-
+	
+	public RevokeWriteAccess(String granteeId, String patientId) {
+		this.setGranteeId(granteeId);
+		this.setPatientId(patientId);
+	}
+	
 	public void setGranteeId(String granteeId) {
 		this.granteeId = granteeId;
 	}

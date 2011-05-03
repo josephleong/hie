@@ -29,6 +29,7 @@ import javax.net.ssl.SSLSocket;
 
 import Requests.CreateEncryptedEHR;
 import Requests.EncryptedEHR;
+import Requests.IsOwnerCheck;
 import Requests.RAReadRecord;
 import Requests.RARecordReply;
 import Requests.ReadRecord;
@@ -112,6 +113,9 @@ public class DataServer implements Runnable {
 				insertEHR((CreateEncryptedEHR) request);
 				response = new Reply("Successfully Created");
 				logInfo(((CreateEncryptedEHR) request).getOwner()+" INSRTED " + ((CreateEncryptedEHR) request).getUserId()+"'s record");
+			} else if(request instanceof IsOwnerCheck) {
+				if(isOwnerCheck((IsOwnerCheck) request)) response = new Reply("true");
+				else response = new Reply("false");
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -120,6 +124,34 @@ public class DataServer implements Runnable {
 		return response;
 	}
 	
+	private boolean isOwnerCheck(IsOwnerCheck request) {
+		Connection connection = null;
+		ResultSet resultSet = null;
+		Statement statement = null;
+		try {
+			Class.forName("org.sqlite.JDBC");
+			connection = DriverManager.getConnection("jdbc:sqlite:ds.db");
+			statement = connection.createStatement();
+			resultSet = statement
+					.executeQuery("select owner from records where userId ='"
+							+ request.getPatiendId() + "';");
+			if (resultSet.next()) {
+				if (request.getDoctorId().equals(resultSet.getString("owner"))) {
+					return true;
+				}
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		try {
+			statement.close();
+			connection.close();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return false;
+	}
+
 	private void insertEHR(CreateEncryptedEHR ehr) {
 		Connection conn = null;
 		Statement statement = null;
@@ -127,16 +159,7 @@ public class DataServer implements Runnable {
 			Class.forName("org.sqlite.JDBC");
 			conn = DriverManager.getConnection("jdbc:sqlite:ds.db");
 			statement = conn.createStatement();
-//			statement.executeUpdate("insert into records values (" +
-//					ehr.getUserId() + ", "+
-//					ehr.getOwner() + ", "+
-//					ehr.getName() + ", "+
-//					ehr.getAge() + ", "+
-//					ehr.getWeight() + ", "+
-//					ehr.getDiagnosis() + ", "+
-//					ehr.getPrescriptions() + ", "+
-//					ehr.getOther() + ", "+
-//					";");
+
 			PreparedStatement prep = conn.prepareStatement(
 	        "insert into records values (?, ?, ?, ?, ?, ?, ?, ?);");
 

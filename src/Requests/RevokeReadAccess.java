@@ -16,6 +16,11 @@ public class RevokeReadAccess extends Request {
 		this.setPatientId(patientId);
 	}
 
+	public RevokeReadAccess(String granteeId, String patientId) {
+		this.setGranteeId(granteeId);
+		this.setPatientId(patientId);
+	}
+
 	public void setGranteeId(String granteeId) {
 		this.granteeId = granteeId;
 	}

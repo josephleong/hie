@@ -12,6 +12,11 @@ public class GrantReadAccess extends Request {
 		this.setGranteeId(granteeId);
 		this.setPatientId(patientId);
 	}
+	
+	public GrantReadAccess(String granteeId, String patientId) {
+		this.setGranteeId(granteeId);
+		this.setPatientId(patientId);
+	}
 
 	public void setGranteeId(String granteeId) {
 		this.granteeId = granteeId;
