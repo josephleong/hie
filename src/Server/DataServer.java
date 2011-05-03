@@ -131,13 +131,17 @@ public class DataServer implements Runnable {
 			Class.forName("org.sqlite.JDBC");
 			connection = DriverManager.getConnection("jdbc:sqlite:ds.db");
 			statement = connection.createStatement();
-			if(rr instanceof RAReadRecord) {
-				resultSet = statement.executeQuery("select userId, owner, "+((RAReadRecord) rr).getColumns()+" from records where "+ ((RAReadRecord) rr).getConditions()+";");
+			if (rr instanceof RAReadRecord) {
+				resultSet = statement.executeQuery("select userId, owner, "
+						+ ((RAReadRecord) rr).getColumns()
+						+ " from records where "
+						+ ((RAReadRecord) rr).getConditions() + ";");
 				ArrayList<EncryptedEHR> list = new ArrayList<EncryptedEHR>();
 				while (resultSet.next()) {
-					 list.add(resultSetToEncEHR(resultSet));
-				 	response = new RARecordReply("", list);
-				} 
+					list.add(resultSetToEncEHR(resultSet));
+
+				}
+				response = new RARecordReply("", list);
 			} else {
 				resultSet = statement
 					.executeQuery("select * from records where userId = '"

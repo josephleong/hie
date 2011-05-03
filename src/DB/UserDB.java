@@ -79,7 +79,7 @@ public class UserDB {
     	prepRA.setString(1, "RA1");
     	m.update("Password1".getBytes()); // password
     	prepRA.setString(2, new BigInteger(1,m.digest()).toString(16));
-    	prepRA.setString(3, "owner, prescriptions");
+    	prepRA.setString(3, "other, prescriptions");
     	prepRA.setBoolean(4, true);
     	prepRA.addBatch();
     	prepRA.setString(1, "RA2");

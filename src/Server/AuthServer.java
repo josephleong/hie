@@ -180,7 +180,7 @@ public class AuthServer implements Runnable {
 					logInfo("HISP "+((ReadRecord) request).getAgentId() + " READ record "+ ((ReadRecord) request).getRecordId());
 				} else if(((ReadRecord) request).getType().equals("ra")) {
 					response = getRecord((ReadRecord) request);
-					logInfo("RA "+((ReadRecord) request).getAgentId() + " READ record "+ ((ReadRecord) request).getRecordId());
+					logInfo("RA "+((ReadRecord) request).getAgentId() + " READ records");
 				}		
 			} else if (request instanceof HISPLogin) {
 				if (checkHISPUser(((HISPLogin) request).getUserid(), ((HISPLogin) request)
