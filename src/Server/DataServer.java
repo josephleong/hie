@@ -35,6 +35,7 @@ import Requests.RARecordReply;
 import Requests.ReadRecord;
 import Requests.Reply;
 import Requests.Request;
+import Requests.UpdateRecord;
 import Requests.VerificationRequest;
 
 /**
@@ -116,6 +117,8 @@ public class DataServer implements Runnable {
 			} else if(request instanceof IsOwnerCheck) {
 				if(isOwnerCheck((IsOwnerCheck) request)) response = new Reply("true");
 				else response = new Reply("false");
+			} else if(request instanceof UpdateRecord) {
+				response = updateRecord((UpdateRecord)request);
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -124,6 +127,48 @@ public class DataServer implements Runnable {
 		return response;
 	}
 	
+	private Reply updateRecord(UpdateRecord request) {
+		Connection connection = null;
+		Statement statement = null;
+		try {
+			Class.forName("org.sqlite.JDBC");
+			connection = DriverManager.getConnection("jdbc:sqlite:ds.db");
+			statement = connection.createStatement();
+			String updateString = "update records set ";
+
+			if(!request.getName().equals("")) 
+				updateString+="name = '"+request.getName()+"', ";
+			if(!request.getAge().equals("")) 
+				updateString+="age = '"+request.getAge()+"', ";
+			if(!request.getWeight().equals("")) 
+				updateString+="weight = '"+request.getWeight()+"', ";
+			if(!request.getDiagnosis().equals("")) 
+				updateString+="diagnosis = '"+request.getDiagnosis()+"', ";
+			if(!request.getPrescriptions().equals("")) 
+				updateString+="prescriptions = '"+request.getPrescriptions()+"', ";
+			if(!request.getOther().equals("")) 
+				updateString+="other = '"+request.getOther()+"', ";
+			updateString = updateString.substring(0, updateString.length()-2);
+			updateString+= " where userId = '"+request.getUserId()+"';";
+					
+			System.out.println(updateString);
+			if(!updateString.equals("update records se"+" where userId = '"+request.getUserId()+"';"))
+				statement.executeUpdate(updateString );
+			return (new Reply("Update Success"));			
+			
+			
+		} catch (Exception e) {
+			e.printStackTrace();
+		} 
+		try {
+			statement.close();
+			connection.close();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}		
+		return new Reply("Error Updating");
+	}
+
 	private boolean isOwnerCheck(IsOwnerCheck request) {
 		Connection connection = null;
 		ResultSet resultSet = null;

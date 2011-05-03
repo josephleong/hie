@@ -8,7 +8,6 @@ package Requests;
 @SuppressWarnings("serial")
 public class UpdateRecord extends Request {
 	private String userId;
-	private String owner;
 	private String name;
 	private String age;
 	private String weight;
@@ -17,11 +16,11 @@ public class UpdateRecord extends Request {
 	private String diagnosis;
 	private byte[] key;
 	
-	public UpdateRecord(String userId, String owner, String name, String age,
+	public UpdateRecord(String userId, String name, String age,
 			String weight, String prescriptions, String other, String diagnosis, byte[] key) {
 		super();
 		this.userId = userId;
-		this.owner = owner;
+
 		this.name = name;
 		this.age = age;
 		this.weight = weight;
@@ -31,11 +30,11 @@ public class UpdateRecord extends Request {
 		this.setKey(key);
 	}
 	
-	public UpdateRecord(String userId, String owner, String name, String age,
+	public UpdateRecord(String userId, String name, String age,
 			String weight, String prescriptions, String other, String diagnosis) {
 		super();
 		this.userId = userId;
-		this.owner = owner;
+		
 		this.name = name;
 		this.age = age;
 		this.weight = weight;
@@ -58,12 +57,7 @@ public class UpdateRecord extends Request {
 	public void setUserId(String userId) {
 		this.userId = userId;
 	}
-	public String getOwner() {
-		return owner;
-	}
-	public void setOwner(String owner) {
-		this.owner = owner;
-	}
+	
 	public String getName() {
 		return name;
 	}

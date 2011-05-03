@@ -101,7 +101,7 @@ public class HISPagent {
 				"(4) 'revoke read' access to an EHR\n" +
 				"(5) 'grant write' access to an EHR\n" +
 				"(6) 'revoke write' access to an EHR\n" +
-				"(7) 'add' information to an EHR\n" +
+				"(7) 'update' information of an EHR\n" +
 				"(8) 'quit'");
 		String command = bufferedreader.readLine();
 		if(command.equals("view") || command.equals("1")) {
@@ -156,10 +156,9 @@ public class HISPagent {
 			String patientId = bufferedreader.readLine();
 			request = new RevokeWriteAccess(username, password, agentId, patientId);
 		}
-		else if(command.equals("add") || command.equals("7")) {
+		else if(command.equals("update") || command.equals("7")) {
 			System.out.println("What is the patients's userId?");
 			String userId = bufferedreader.readLine();
-			String owner = username;
 			System.out.println("What is the patients's name?");
 			String name = bufferedreader.readLine();
 			System.out.println("What is the patients's age?");
@@ -173,7 +172,7 @@ public class HISPagent {
 			System.out.println("Input any other information.");
 			String other = bufferedreader.readLine();
 			
-			request = new UpdateRecord(userId, owner, name, age, weight, diagnosis, prescriptions, other);
+			request = new UpdateRecord(userId, name, age, weight, prescriptions, other, diagnosis);
 		}
 		else if(command.equals("quit") || command.equals("8")) {
 			System.out.println("Goodbye.");

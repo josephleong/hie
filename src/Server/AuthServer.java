@@ -39,6 +39,7 @@ import Requests.Reply;
 import Requests.Request;
 import Requests.RevokeReadAccess;
 import Requests.RevokeWriteAccess;
+import Requests.UpdateRecord;
 import Requests.VerificationRequest;
 
 public class AuthServer implements Runnable {
@@ -261,6 +262,12 @@ public class AuthServer implements Runnable {
 					response = new Reply("Successfully Revoked Write Access");
 					logInfo(((RevokeWriteAccess) request).getGranteeId() + " was REVOKED WRITE to "+((RevokeWriteAccess) request).getPatientId()+" by " +userId);
 				} else response = new Reply("Invalid Request");
+			} if(request instanceof UpdateRecord) {
+				if(hasWriteAccess(((UpdateRecord) request).getUserId())){
+					((UpdateRecord) request).setKey(getKey(((UpdateRecord) request).getUserId()));
+					DSobjOut.writeObject((UpdateRecord)request);
+					response = (Reply) DSobjIn.readObject();
+				} else response = new Reply("You don't have permissions to do that");
 			}
 
 
@@ -270,7 +277,21 @@ public class AuthServer implements Runnable {
 
 		return response;
 	}
-	
+
+	private byte[] getKey(String uid) {
+		try {
+
+			KSobjOut.writeObject("get");
+			KSobjOut.writeObject(uid);
+
+			return (byte[]) KSobjIn.readObject();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return null;
+
+	}
+
 	private void revokeReadAccess(String patientId, String granteeId) {
 		Connection connection = null;
 		ResultSet resultSet = null;
