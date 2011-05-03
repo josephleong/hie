@@ -275,8 +275,8 @@ public class DataServer implements Runnable {
 			if (rr instanceof RAReadRecord) {
 				resultSet = statement.executeQuery("select userId, owner, "
 						+ ((RAReadRecord) rr).getColumns()
-						+ " from records where "
-						+ ((RAReadRecord) rr).getConditions() + ";");
+						+ " from records;");// where "
+						//+ ((RAReadRecord) rr).getConditions() + ";");
 				ArrayList<EncryptedEHR> list = new ArrayList<EncryptedEHR>();
 				while (resultSet.next()) {
 					list.add(resultSetToEncEHR(resultSet));
