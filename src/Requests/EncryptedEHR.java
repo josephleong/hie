@@ -26,6 +26,11 @@ public class EncryptedEHR extends Reply{
 	}
 
 
+	public EncryptedEHR() {
+		super("Successful Retrieval");
+	}
+
+
 	public String getUserId() {
 		return userId;
 	}

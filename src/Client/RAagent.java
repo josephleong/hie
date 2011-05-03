@@ -55,7 +55,7 @@ public class RAagent {
 				System.out.println();
 			} while (response.equals(new Reply("Invalid User Login")));
                        
-            ReadRecord request= new ReadRecord(username, "ra");	
+            ReadRecord request= new ReadRecord(null, "ra", username);	
             objOut.writeObject(request);
             response = (Reply)objIn.readObject();
         	System.out.println(response.getMessage());

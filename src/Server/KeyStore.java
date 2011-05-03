@@ -62,20 +62,23 @@ public class KeyStore implements Runnable {
 				System.out.println("Couldn't Verify");
 				return;
 			}
-			
-			String request = (String) objIn.readObject();
-			if (request.equals("get")) {
-				String userIdOfRequest = (String) objIn.readObject();
-				byte[] key = getKey(userIdOfRequest);
-System.out.println(key);
-				logInfo("Retrieving userId "+userIdOfRequest+"'s key.");
-				objOut.writeObject(key);
 
-			} else if (request.equals("add")) {
-				String userId = (String) objIn.readObject();
-				byte[] key = (byte[]) objIn.readObject();
-				addKey(userId, key);
-				logInfo("Adding userId "+userId+"'s key to KS.");
+			String request = (String) objIn.readObject();
+			while (request != null) {
+				if (request.equals("get")) {
+					String userIdOfRequest = (String) objIn.readObject();
+					byte[] key = getKey(userIdOfRequest);
+					System.out.println(key);
+					logInfo("Retrieving userId " + userIdOfRequest + "'s key.");
+					objOut.writeObject(key);
+
+				} else if (request.equals("add")) {
+					String userId = (String) objIn.readObject();
+					byte[] key = (byte[]) objIn.readObject();
+					addKey(userId, key);
+					logInfo("Adding userId " + userId + "'s key to KS.");
+				}
+				request = (String) objIn.readObject();
 			}
 
 		} catch (EOFException exception) {

@@ -13,6 +13,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.logging.FileHandler;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
@@ -25,6 +26,9 @@ import javax.net.ssl.SSLSocketFactory;
 import Requests.EncryptedEHR;
 import Requests.HISPLogin;
 import Requests.PHRLogin;
+import Requests.RALogin;
+import Requests.RAReadRecord;
+import Requests.RARecordReply;
 import Requests.ReadRecord;
 import Requests.Reply;
 import Requests.Request;
@@ -81,7 +85,7 @@ public class AuthServer implements Runnable {
 	private void connectToDS(String ip) {
 		try {
 			SSLSocketFactory sslsocketfactory = (SSLSocketFactory) SSLSocketFactory.getDefault();
-			SSLSocket sslsocket = (SSLSocket) sslsocketfactory.createSocket(ip, 9998);
+			SSLSocket sslsocket = (SSLSocket) sslsocketfactory.createSocket(ip, 9995);
 			String[] enabledCipherSuites = { "SSL_DH_anon_WITH_RC4_128_MD5" };
 			sslsocket.setEnabledCipherSuites(enabledCipherSuites);
 			
@@ -177,8 +181,7 @@ public class AuthServer implements Runnable {
 				} else if(((ReadRecord) request).getType().equals("ra")) {
 					response = getRecord((ReadRecord) request);
 					logInfo("RA "+((ReadRecord) request).getAgentId() + " READ record "+ ((ReadRecord) request).getRecordId());
-				}
-				
+				}		
 			} else if (request instanceof HISPLogin) {
 				if (checkHISPUser(((HISPLogin) request).getUserid(), ((HISPLogin) request)
 						.getPassword())) {
@@ -190,6 +193,11 @@ public class AuthServer implements Runnable {
 					userId = ((PHRLogin) request).getUserid();
 					response = new Reply("Welcome!");
 				} else response = new Reply("Invalid User Login");
+			} else if (request instanceof RALogin) {
+				if (checkRAUser(((RALogin) request).getUserid(), ((RALogin) request).getPassword())) {
+					userId = ((RALogin) request).getUserid();
+					response = new Reply("Welcome!");
+				} else response = new Reply("Invalid User Login");
 			}
 
 		} catch (Exception e) {
@@ -197,6 +205,95 @@ public class AuthServer implements Runnable {
 		}
 
 		return response;
+	}
+	
+	/**
+	 * Retrieves an EHR 
+	 * 
+	 * @param userId
+	 *            the requested record's associated userId
+	 * @return - Server's Reply
+	 */
+	private Reply getRecord(ReadRecord rr) {
+		try {
+			if (rr.getType().equals("ra")) {
+				DSobjOut.writeObject(getRAPermissions(rr));
+				ArrayList<EncryptedEHR> ehrList = (ArrayList<EncryptedEHR>) ((RARecordReply) DSobjIn
+						.readObject()).getList();
+				byte[] key = null;
+				String records = "";
+				for(EncryptedEHR ehr: ehrList) {
+					KSobjOut.writeObject("get");
+					KSobjOut.writeObject(ehr.getUserId());
+
+					key = (byte[]) KSobjIn.readObject();
+
+					records += decryptEHR(ehr, key)+"\n";
+
+				}
+				return new Reply(records);
+			} else {
+				DSobjOut.writeObject(rr);
+				Reply rep = (Reply) DSobjIn.readObject();
+				if (!rep.getMessage().equals("Error Processing Request.")) {
+
+					EncryptedEHR ehr = (EncryptedEHR) rep;
+					KSobjOut.writeObject("get");
+					KSobjOut.writeObject(ehr.getUserId());
+
+					byte[] key = (byte[]) KSobjIn.readObject();
+
+					return decryptEHR(ehr, key);
+
+				}
+
+				return rep;
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
+
+	private boolean checkRAUser(String username, String password) throws NoSuchAlgorithmException {
+		MessageDigest m = MessageDigest.getInstance("MD5");
+		m.reset();
+		m.update(password.getBytes());
+		byte[] digest = m.digest();
+		BigInteger bigInt = new BigInteger(1, digest);
+		String hashtext = bigInt.toString(16);
+
+		Connection connection = null;
+		ResultSet resultSet = null;
+		Statement statement = null;
+		boolean check = false;
+		try {
+			Class.forName("org.sqlite.JDBC");
+			connection = DriverManager.getConnection("jdbc:sqlite:user.db");
+			statement = connection.createStatement();
+			resultSet = statement
+					.executeQuery("select password from ra where username = '"
+							+ username + "';");
+			if (resultSet.next()) {
+				if (resultSet.getString("password").equals(hashtext))
+					check = true;
+				else
+					check = false;
+
+			} else
+				check = false;
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			try {
+				statement.close();
+				connection.close();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+		return check;
 	}
 
 	private boolean hasReadAccess(String recordId) {
@@ -273,31 +370,20 @@ public class AuthServer implements Runnable {
 		return check;
 	}
 
-
-
-	/**
-	 * Retrieves an EHR 
-	 * 
-	 * @param userId
-	 *            the requested record's associated userId
-	 * @return - Server's Reply
-	 */
-	private Reply getRecord(ReadRecord rr) {
+	
+	
+	private RAReadRecord getRAPermissions(ReadRecord rr) {
 		try {
-
-			DSobjOut.writeObject(rr);
-
-			Reply rep = (Reply) DSobjIn.readObject();
-			if (!rep.getMessage().equals("Error Processing Request.")) {
-				EncryptedEHR ehr = (EncryptedEHR) rep;
-				KSobjOut.writeObject("get");
-				KSobjOut.writeObject(ehr.getUserId());
-
-				byte[] key = (byte[]) KSobjIn.readObject();
-
-				return decryptEHR(ehr, key);
+			Class.forName("org.sqlite.JDBC");
+			Connection connection = DriverManager.getConnection("jdbc:sqlite:user.db");
+			Statement statement = connection.createStatement();
+			ResultSet resultSet = statement
+					.executeQuery("select columns, conditions from ra where username = '"
+							+ rr.getAgentId() + "';");
+			if (resultSet.next()) {
+				return new RAReadRecord(rr, resultSet.getString("columns"), resultSet.getString("conditions"));
 			}
-			return rep;
+			
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -308,14 +394,22 @@ public class AuthServer implements Runnable {
 		try {
 			String message = "UserId: " + ehr.getUserId() + "\n";
 			message += "Owner: " + ehr.getOwner() + "\n";
-			message += "Name: " + Crypto.decrypt(ehr.getName(), key) + "\n";
-			message += "Age: " + Crypto.decrypt(ehr.getAge(), key) + "\n";
-			message += "Weight: " + Crypto.decrypt(ehr.getWeight(), key) + "\n";
-			message += "Diagnosis: " + Crypto.decrypt(ehr.getDiagnosis(), key)
-					+ "\n";
-			message += "Prescriptions: "
-					+ Crypto.decrypt(ehr.getPrescriptions(), key) + "\n";
-			message += "Other: " + Crypto.decrypt(ehr.getOther(), key) + "\n";
+			if (ehr.getName() != null)
+				message += "Name: " + Crypto.decrypt(ehr.getName(), key) + "\n";
+			if (ehr.getAge() != null)
+				message += "Age: " + Crypto.decrypt(ehr.getAge(), key) + "\n";
+			if (ehr.getWeight() != null)
+				message += "Weight: " + Crypto.decrypt(ehr.getWeight(), key)
+						+ "\n";
+			if (ehr.getDiagnosis() != null)
+				message += "Diagnosis: "
+						+ Crypto.decrypt(ehr.getDiagnosis(), key) + "\n";
+			if (ehr.getPrescriptions() != null)
+				message += "Prescriptions: "
+						+ Crypto.decrypt(ehr.getPrescriptions(), key) + "\n";
+			if (ehr.getOther() != null)
+				message += "Other: " + Crypto.decrypt(ehr.getOther(), key)
+						+ "\n";
 			return new Reply(message);
 		} catch (Exception e) {
 			e.printStackTrace();
