@@ -24,17 +24,17 @@ import Server.Crypto;
  *
  */
 public class PHRagent {
-	private static final String ip = "localhost"; // IP of AuthServer
+	private static String ip = "localhost"; // IP of AuthServer
 	
 	public static void main(String[] args) {
 	try {
-			       
+			if(args.length != 0)
+				ip = args[0];
+			
             InputStream inputstream = System.in;
             InputStreamReader inputstreamreader = new InputStreamReader(inputstream);
             BufferedReader bufferedreader = new BufferedReader(inputstreamreader);
 
-//            System.out.println("Please enter the IP of the server to connect to.");
-//            String ip = bufferedreader.readLine();
             SSLSocket sslsocket = handshake(ip);
             
             OutputStream sslOut = sslsocket.getOutputStream();
@@ -56,9 +56,12 @@ public class PHRagent {
 				username = bufferedreader.readLine();
 				System.out.println("Password?");
 				password = bufferedreader.readLine();
+				long startTime = System.currentTimeMillis();
 				objOut.writeObject(new PHRLogin(username, password));
 				response = (Reply) objIn.readObject();
+				long endTime = System.currentTimeMillis();
 				System.out.println(response.getMessage());
+				System.out.println("Time: "+ (endTime - startTime) + " ms");
 				System.out.println();
 			} while (response.equals(new Reply("Invalid User Login")));
                        

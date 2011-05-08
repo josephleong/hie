@@ -43,8 +43,8 @@ import Requests.UpdateRecord;
 import Requests.VerificationRequest;
 
 public class AuthServer implements Runnable {
-	private static final String DSIP = "localhost";
-	private static final String KSIP = "localhost";
+	private static String DSIP = "localhost";
+	private static String KSIP = "localhost";
 	
 	private static SSLSocket sslsocket;
 	private ObjectOutputStream DSobjOut = null;
@@ -60,6 +60,10 @@ public class AuthServer implements Runnable {
 	}
 
 	public static void main(String[] args) throws IOException, ClassNotFoundException {
+		if (args.length >= 2) {
+			DSIP = args[0];
+			KSIP = args[1];
+		}
 		System.out.println("Authentication Server Started.");
 		SSLServerSocket sslserversocket = handshake();
 		while (true) {
@@ -747,6 +751,7 @@ public class AuthServer implements Runnable {
 			logger.addHandler(fh);
 
 			logger.info(entry);
+			fh.close();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

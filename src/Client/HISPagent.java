@@ -30,16 +30,15 @@ import Server.Crypto;
  *
  */
 public class HISPagent {
-	private static final String ip = "localhost";
+	private static String ip = "localhost";
 	public static void main(String[] args) {
 		try {
-			            
+			if (args.length != 0)
+				ip = args[0];
             InputStream inputstream = System.in;
             InputStreamReader inputstreamreader = new InputStreamReader(inputstream);
             BufferedReader bufferedreader = new BufferedReader(inputstreamreader);
             
-//            System.out.println("Please enter the IP of the server to connect to.");
-//            String ip = bufferedreader.readLine();
             SSLSocket sslsocket = handshake(ip);
             
             OutputStream sslOut = sslsocket.getOutputStream();
@@ -70,9 +69,12 @@ public class HISPagent {
 				System.out.println("");
 				request = createRequest(username, password);
 				if (request != null) {
+					long startTime = System.currentTimeMillis();
 					objOut.writeObject(request);
 					response = (Reply) objIn.readObject();
+					long endTime = System.currentTimeMillis();
 					System.out.println(response.getMessage());
+					System.out.println("Time: "+ (endTime - startTime) + " ms");
 					System.out.println("\nPress ENTER to continue.");
 					bufferedreader.read();
 				}

@@ -402,6 +402,7 @@ public class DataServer implements Runnable {
 			logger.addHandler(fh);
 
 			logger.info(entry);
+			fh.close();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
