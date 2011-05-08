@@ -52,19 +52,20 @@ public class RAagent {
 				username = bufferedreader.readLine();
 				System.out.println("Password?");
 				password = bufferedreader.readLine();
-				long startTime = System.currentTimeMillis();
+				
 				objOut.writeObject(new RALogin(username, password));
 				response = (Reply) objIn.readObject();
-				long endTime = System.currentTimeMillis();
 				System.out.println(response.getMessage());
-				System.out.println("Time: "+ (endTime - startTime) + " ms");
 				System.out.println();
 			} while (response.equals(new Reply("Invalid User Login")));
                        
             ReadRecord request= new ReadRecord(null, "ra", username);	
+            long startTime = System.currentTimeMillis();
             objOut.writeObject(request);
             response = (Reply)objIn.readObject();
+            long endTime = System.currentTimeMillis();
         	System.out.println(response.getMessage());
+        	System.out.println("Time: "+ (endTime - startTime) + " ms");
 
              
         } catch (Exception exception) {
